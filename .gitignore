@@ -9,12 +9,5 @@
 .htaccess
 *config.php
 
-/app/static/*.png
-/data
-/lib
-/static
-/test/data
-
-/script/data
-/script/node_modules
+/vendor/
 
