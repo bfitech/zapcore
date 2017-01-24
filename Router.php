@@ -392,12 +392,12 @@ EOD;
 	/**
 	 * Shutdown function.
 	 *
-	 * If no request is handled at this point, show a 404.
+	 * If no request is handled at this point, show a 501.
 	 */
 	public function shutdown() {
 		if ($this->request_handled)
 			return;
-		$this->abort(404);
+		$this->abort(501);
 	}
 
 	/* getters */
