@@ -60,9 +60,9 @@ class Router extends Header {
 		}
 
 		if ($this->_host === null) {
-			$host = isset($_SERVER['HTTPS']) && !empty($_SERVER['HTTPS'])
+			$prot = isset($_SERVER['HTTPS']) && !empty($_SERVER['HTTPS'])
 				? 'https://' : 'http://';
-			$host.= isset($_SERVER['HTTP_HOST'])
+			$host = isset($_SERVER['HTTP_HOST'])
 				? $_SERVER['HTTP_HOST'] : 'localhost';
 			$port = isset($_SERVER['SERVER_PORT'])
 				? @(int)$_SERVER['SERVER_PORT'] : 80;
@@ -70,9 +70,9 @@ class Router extends Header {
 				$port = null;
 			if (in_array($port, [80, 443]))
 				$port = null;
-			if ($port)
+			if (strstr($host, ':') === false && $port)
 				$host .= ':' . $port;
-			$host .= $this->_home;
+			$host = $prot . $host . $this->_home;
 			$this->_host = $host;
 		}
 
