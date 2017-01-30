@@ -13,7 +13,7 @@ class RouterTest extends TestCase {
 	public static $server_addr = 'http://127.0.0.1:9999';
 
 	public static function setUpBeforeClass() {
-		self::$server_pid = zd\CoreDev::server_up();
+		self::$server_pid = zd\CoreDev::server_up(__DIR__);
 		if (!self::$server_pid)
 			die();
 	}
