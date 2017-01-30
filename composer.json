@@ -1,6 +1,6 @@
 {
     "name": "bfitech/zapcore",
-    "description": "A very simple router.",
+    "description": "A very simple router and other utils.",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -10,11 +10,17 @@
         }
     ],
     "require": {
-        "php": ">=5.4.0"
+        "php": ">=5.4.0",
+        "ext-curl": "*"
     },
     "autoload": {
         "psr-4": {
             "BFITech\\ZapCore\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BFITech\\ZapCoreDev\\": ""
         }
     }
 }

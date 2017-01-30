@@ -3,7 +3,6 @@
 
 namespace BFITech\ZapCore;
 
-require_once(__DIR__ . '/Header.php');
 
 class Router extends Header {
 
@@ -62,15 +61,17 @@ class Router extends Header {
 		if ($this->_host === null) {
 			$prot = isset($_SERVER['HTTPS']) && !empty($_SERVER['HTTPS'])
 				? 'https://' : 'http://';
-			$host = isset($_SERVER['HTTP_HOST'])
+			$host = isset($_SERVER['SERVER_NAME'])
 				? $_SERVER['HTTP_HOST'] : 'localhost';
 			$port = isset($_SERVER['SERVER_PORT'])
 				? @(int)$_SERVER['SERVER_PORT'] : 80;
 			if ($port < 0 || $port > 65535)
 				$port = null;
-			if (in_array($port, [80, 443]))
+			if ($port == 80)
 				$port = null;
-			if (strstr($host, ':') === false && $port)
+			if ($port == 443 && $prot == 'https')
+				$port = null;
+			if ($port)
 				$host .= ':' . $port;
 			$host = $prot . $host . $this->_home;
 			$this->_host = $host;
@@ -223,6 +224,14 @@ class Router extends Header {
 		$arg['put'] = null;
 		$arg['delete'] = null;
 		$arg['cookie'] = $_COOKIE;
+		$args['header'] = [];
+		foreach ($_SERVER as $key => $val) {
+			if (strpos($key, 'HTTP_') === 0) {
+				$key = substr($key, 5, strlen($key));
+				$key = strtolower($key);
+				$args['header'][$key] = $val;
+			}
+		}
 
 		/* ************** */
 		/* request method */

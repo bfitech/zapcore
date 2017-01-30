@@ -82,7 +82,7 @@ class Header {
 	 *     header is to be sent. If a string is set, it will be used
 	 *     in the header.
 	 * @param string $xsendfile_header Header containing xsendfile
-	 *     directive for Apache or the equivalent for other webserver.
+	 *     directive for Apache or the equivalent for other webservers.
 	 *     May be set externally with webserver internal directive.
 	 */
 	public function send_header($fname=false, $cache=false, $echo=true,
@@ -92,7 +92,7 @@ class Header {
 		if ($fname && (!file_exists($fname) || is_dir($fname)))
 			$code = 404;
 
-		extract($this->get_header_string($code));
+		extract(self::get_header_string($code));
 
 		header("HTTP/1.1 $code $msg");
 		if ($cache) {
@@ -117,14 +117,14 @@ class Header {
 			return;
 
 		if ($code != 200)
-			# Echoing error page, i.e. serving non-HTML as error page
+			# Echoing error page, i.e. serving non-text as error page
 			# makes little sense. Error pages must always be generated
 			# and not cached.
 			die();
 
 		@header('Content-Length: ' . filesize($fname));
 
-		$mime = $this->get_mimetype($fname);
+		$mime = Common::get_mimetype($fname);
 		@header("Content-Type: $mime");
 
 		if ($disposition) {
@@ -143,53 +143,12 @@ class Header {
 	}
 
 	/**
-	 * Find a mime type, fall back to using `file`.
-	 *
-	 * @param string $fname The file name.
-	 * @return string The MIME type or application/octet-stream.
-	 */
-	public static function get_mimetype($fname) {
-
-		$pi = pathinfo($fname);
-
-		if (isset($pi['extension'])) {
-			// Because these things are magically ambiguous, we'll
-			// resort to extension.
-			$pe = strtolower($pi['extension']);
-			if ($pe == 'css')
-				return 'text/css';
-			if ($pe == 'js')
-				return 'application/x-javascript';
-			if ($pe == 'json')
-				return 'application/x-json';
-			if ($pe == 'htm' || $pe == 'html')
-				return 'text/html; charset=utf-8';
-		}
-
-		// default
-		$mime = 'application/octet-stream';
-		$check_mime = null;
-		if (function_exists('mime_content_type')) {
-			// using mime_content_type() if exists
-			$check_mime = @mime_content_type($fname);
-		} elseif (file_exists('/usr/bin/file')) {
-			// using `file`
-			$sh = "/usr/bin/file -b --mime \"$fname\"";
-			$check_mime = `$sh`; 
-		}
-		if ($check_mime)
-			$mime = $check_mime;
-
-		return $mime;
-	}
-
-	/**
-	 * Convenient method for JSON response.
+	 * Convenience method for JSON response.
 	 */
 	function print_json($errno=0, $data=[], $http_code=200, $cache=0) {
 		$this->send_header(0, $cache, false, $http_code);
 		$js = json_encode(compact('errno', 'data'));
-		@header("Content-Length: ".strlen($js));
+		@header("Content-Length: " . strlen($js));
 		@header('Content-Type: application/json');
 		die($js);
 	}
