@@ -3,7 +3,7 @@
 
 namespace BFITech\ZapCore;
 
-class ZapCoreCommonException extends \Exception {}
+class CommonError extends \Exception {}
 
 class Common {
 
@@ -96,7 +96,7 @@ class Common {
 	) {
 
 		if (!function_exists('curl_setopt'))
-			throw new ZapCoreCommonException(
+			throw new CommonError(
 				"cURL extension not installed.");
 
 		if (is_array($url_or_kwargs)) {
@@ -120,7 +120,7 @@ class Common {
 		}
 
 		if (!isset($url) || !$url)
-			throw new ZapCoreCommonException("URL not set.");
+			throw new CommonError("URL not set.");
 
 		$opts = [
 			CURLOPT_RETURNTRANSFER => true,

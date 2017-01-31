@@ -85,9 +85,10 @@ class Header {
 	 *     directive for Apache or the equivalent for other webservers.
 	 *     May be set externally with webserver internal directive.
 	 */
-	public function send_header($fname=false, $cache=false, $echo=true,
-		$code=200, $disposition=false, $xsendfile_header=null)
-	{
+	public static function send_header(
+		$fname=false, $cache=false, $echo=true,
+		$code=200, $disposition=false, $xsendfile_header=null
+	) {
 
 		if ($fname && (!file_exists($fname) || is_dir($fname)))
 			$code = 404;
@@ -107,7 +108,7 @@ class Header {
 			header("Pragma: no-cache");
 		}
 		header("Last-Modified: " . gmdate("D, d M Y H:i:s")." GMT");
-		header("X-Powered-By: Bazinga!");
+		header("X-Powered-By: Zap!");
 
 		if (!$echo)
 			return;
@@ -144,13 +145,43 @@ class Header {
 
 	/**
 	 * Convenience method for JSON response.
+	 *
+	 * @param int $errno Error number to return.
+	 * @param array $data Data to return.
+	 * @param int $http_code Valid HTTP response code.
+	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 */
-	function print_json($errno=0, $data=[], $http_code=200, $cache=0) {
-		$this->send_header(0, $cache, false, $http_code);
+	public static function print_json(
+		$errno=0, $data=[], $http_code=200, $cache=0
+	) {
+		self::send_header(0, $cache, false, $http_code);
 		$js = json_encode(compact('errno', 'data'));
 		@header("Content-Length: " . strlen($js));
 		@header('Content-Type: application/json');
 		die($js);
+	}
+
+	/**
+	 * Even shorter JSON response formatter.
+	 *
+	 * @param array $retval Return value of typical Zap HTTP response.
+	 * @param int $forbidden_code If $retval[0] == 0, HTTP code is 200.
+	 *     Otherwise it defaults to 401 which we can override with
+	 *     this parameter, e.g. 403.
+	 * @param int $cache Cache duration in seconds. 0 for no cache.
+	 */
+	public static function pj(
+		$retval, $forbidden_code=null, $cache=0
+	) {
+		if (count($retval) < 2)
+			$retval[] = [];
+		$http_code = 200;
+		if ($retval[0] !== 0) {
+			$http_code = 401;
+			if ($forbidden_code)
+				$http_code = $forbidden_code;
+		}
+		self::$core->print_json($retval[0], $retval[1], $http_code);
 	}
 
 }
