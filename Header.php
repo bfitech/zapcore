@@ -181,7 +181,7 @@ class Header {
 			if ($forbidden_code)
 				$http_code = $forbidden_code;
 		}
-		self::$core->print_json($retval[0], $retval[1], $http_code);
+		self::print_json($retval[0], $retval[1], $http_code);
 	}
 
 }
