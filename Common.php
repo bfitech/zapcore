@@ -198,5 +198,23 @@ class Common {
 		return $checked;
 	}
 
+	/**
+	 * Initiate a kwargs array for safe extraction.
+	 *
+	 * @param array $input_array Input array, typically first
+	 *     parameter in a method.
+	 * @param array $init_array Fallback array when input array
+	 *     is not complete, of the form: `key => default value`.
+	 * @return array A complete array ready to be extract()ed.
+	 */
+	public static function extract_kwargs($input_array, $init_array) {
+		foreach ($init_array as $key => $val) {
+			if (isset($input_array[$key]))
+				continue;
+			$input_array[$key] = $val;
+		}
+		return $input_array;
+	}
+
 }
 
