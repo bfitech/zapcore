@@ -33,3 +33,9 @@ $core->route('/some/thing', function($args) use($core){
 		$core->abort(404);
 	$core->redirect("/some/$var1/other/$var2/thing");
 });
+
+$core->route('/put/it/down', function($args) use($core){
+	$method = $core->get_request_method();
+	$data = $args[strtolower($method)];
+	$core->print_json(0, [$method, $data]);
+}, ['PUT', 'POST']);

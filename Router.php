@@ -15,6 +15,10 @@ class Router extends Header {
 
 	private $request_handled = false;
 
+	private $method_collection = [];
+	private $current_method = null;
+
+
 	/**
 	 * Constructor.
 	 *
@@ -163,6 +167,25 @@ class Router extends Header {
 			return $this->abort(501);
 		}
 
+		$request_method = isset($_SERVER['REQUEST_METHOD'])
+			? $_SERVER['REQUEST_METHOD'] : 'GET';
+		$this->current_method = $request_method;
+
+		# always allow HEAD
+		if (!is_array($method)) {
+			$methods = [$method, 'HEAD'];
+		} else {
+			$methods = array_merge($method, ['HEAD']);
+		}
+		$methods = array_unique($methods);
+		foreach ($methods as $m) {
+			if (!in_array($m, $this->method_collection))
+				$this->method_collection[] = $m;
+		}
+		if (!in_array($request_method, $methods)) {
+			return;
+		}
+
 		/* ***** */
 		/* route */
 		/* ***** */
@@ -194,19 +217,6 @@ class Router extends Header {
 		/* route method */
 		/* ************ */
 
-		$request_method = isset($_SERVER['REQUEST_METHOD'])
-			? $_SERVER['REQUEST_METHOD'] : 'GET';
-
-		# always allow HEAD
-		if (!is_array($method)) {
-			$methods = [$method, 'HEAD'];
-		} else {
-			$methods = array_merge($method, ['HEAD']);
-		}
-		$methods = array_unique($methods);
-		if (!in_array($request_method, $methods)) {
-			return;
-		}
 
 		# process method-path pair only once
 		$method_path = strtolower($request_method) . ':' . $path;
@@ -238,7 +248,7 @@ class Router extends Header {
 		/* ************** */
 
 		$arg['method'] = $request_method;
-		if (in_array($request_method, ['HEAD', 'GET'])) {
+		if (in_array($request_method, ['HEAD', 'GET', 'OPTIONS'])) {
 			# HEAD, GET
 			$this->request_handled = true;
 			$this->wrap_callback($callback, $arg);
@@ -255,6 +265,7 @@ class Router extends Header {
 			# DELETE
 			$arg['delete'] = file_get_contents("php://input");
 		} else {
+			# PATCH, TRACE
 			return $this->abort(501);
 		}
 
@@ -406,7 +417,10 @@ EOD;
 	public function shutdown() {
 		if ($this->request_handled)
 			return;
-		$this->abort(501);
+		$code = 501;
+		if (in_array($this->current_method, $this->method_collection))
+			$code = 404;
+		$this->abort($code);
 	}
 
 	/* getters */
@@ -423,6 +437,13 @@ EOD;
 	 */
 	public function get_host() {
 		return $this->_host;
+	}
+
+	/**
+	 * Show request path without leading slash.
+	 */
+	public function get_request_method() {
+		return $this->current_method;
 	}
 
 	/**

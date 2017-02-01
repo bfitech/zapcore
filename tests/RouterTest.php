@@ -26,7 +26,7 @@ class RouterTest extends TestCase {
 		$url_or_kwargs, $method='GET', $header=[], $get=[], $post=[],
 		$curl_opts=[], $expect_json=false
 	) {
-		return (new zc\Common())->http_client(
+		return zc\Common::http_client(
 			$url_or_kwargs, $method, $header, $get, $post,
 			$curl_opts, $expect_json);
 	}
@@ -94,9 +94,9 @@ class RouterTest extends TestCase {
 
 	public function test_request_components() {
 		$ret = self::request([
-			'url' => '/a/2/thing',
+			'url' => '/X/2/thing',
 			'expect_json' => true]);
-		$this->assertEquals($ret[0], 501);
+		$this->assertEquals($ret[0], 404);
 
 		$ret = self::request([
 			'url' => '/1/2/thing',
@@ -104,6 +104,21 @@ class RouterTest extends TestCase {
 		$this->assertEquals($ret[0], 200);
 		$comp = [1, 2, 'thing'];
 		$this->assertEquals($ret[1]['data'], $comp);
+	}
+
+	public function test_request_method() {
+		$data = ['a' => 1, 'b' => 'x'];
+		$ret = self::request([
+			'url' => '/put/it/down',
+			'method' => 'PUT',
+			'post' => $data,
+			'expect_json' => true,
+		]);
+		$this->assertEquals($ret[0], 200);
+		$this->assertEquals($ret[1]['errno'], 0);
+		$this->assertEquals($ret[1]['data'][0], 'PUT');
+		parse_str($ret[1]['data'][1], $recv);
+		$this->assertEquals($data, $recv);
 	}
 
 	public function test_path_variables() {
@@ -128,6 +143,14 @@ class RouterTest extends TestCase {
 		extract($ret[1]['data']['params']);
 		$this->assertEquals($var1, 3);
 		$this->assertEquals($var2, 6);
+	}
+
+	public function test_unimplemented() {
+		$ret = self::request([
+			'url' => '/put/it/down',
+			'method' => 'DELETE'
+		]);
+		$this->assertEquals($ret[0], 501);
 	}
 }
 

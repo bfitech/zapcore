@@ -81,7 +81,7 @@ class Common {
 	 * @param array $get Query string will be built off of this.
 	 *     Do not use this if you already have query string in URL,
 	 *     unless you have too.
-	 * @param array $post Post data dict.
+	 * @param array $post POST, PUT, DELETE data dict.
 	 * @param array $custom_opts Custom cURL options to add or
 	 *     override defaults.
 	 * @param bool $expect_json Automatically JSON-decode response
@@ -148,22 +148,23 @@ class Common {
 
 		curl_setopt($conn, CURLOPT_URL, $url);
 
-		if ($method == 'HEAD') {
+		if (in_array($method, ['HEAD', 'OPTIONS'])) {
 			curl_setopt($conn, CURLOPT_NOBODY, true);
+			curl_setopt($conn, CURLOPT_HEADER, true);
 		} elseif ($method == 'GET') {
 			# noop
-		} elseif ($method == 'POST') {
-			curl_setopt($conn, CURLOPT_CUSTOMREQUEST, 'POST');
+		} elseif (in_array($method, ['POST', 'PUT', 'DELETE'])) {
+			curl_setopt($conn, CURLOPT_CUSTOMREQUEST, $method);
 			curl_setopt($conn, CURLOPT_POSTFIELDS,
 				http_build_query($post));
 		} else {
-			# only HEAD, GET and POST for now
+			# TRACE, PATCH, etc. are not supported ... yet?
 			return [-1, null];
 		}
 
 		$body = curl_exec($conn);
 		$info = curl_getinfo($conn);
-		if ($method == 'HEAD') {
+		if (in_array($method, ['HEAD', 'OPTIONS'])) {
 			return [$info['http_code'], $body];
 		}
 		curl_close($conn);
