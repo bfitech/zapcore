@@ -24,12 +24,16 @@ class Router extends Header {
 	 *
 	 * @param string|null $home Override home path autodetection.
 	 * @param string|null $host Override host path autodetection.
+	 * @param bool $shutdown Whether shutdown function should be
+	 *     invoked at the end. Useful for multiple routers in one
+	 *     project.
 	 */
-	public function __construct($home=null, $host=null) {
+	public function __construct($home=null, $host=null, $shutdown=true) {
 		$this->_home = $home;
 		$this->_host = $host;
 		$this->_request_parse();
-		register_shutdown_function([$this, 'shutdown']);
+		if ($shutdown)
+			register_shutdown_function([$this, 'shutdown']);
 	}
 
 	/**
