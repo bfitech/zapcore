@@ -27,6 +27,12 @@ $core->route(
 		$core->print_json(0, $args);
 });
 
+$core->route(
+	'/some/{dir}/that/ends/with/<file>',
+	function($args) use($core) {
+		$core->print_json(0, $args);
+});
+
 $core->route('/some/thing', function($args) use($core){
 	extract($args['get'], EXTR_SKIP);
 	if (!isset($var1) || !isset($var2))

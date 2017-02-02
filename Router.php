@@ -97,44 +97,74 @@ class Router extends Header {
 		$req = trim($req, "/");
 
 		# store in private variables
-		$this->request_path = $req;
+		$this->request_path = '/' . $req;
 		$this->request_comp = explode('/', $req);
 	}
 
 	/**
 	 * Path parser.
+	 *
+	 * This parses path and returns arrays that will parse
+	 * requests.
+	 *
+	 * @param string $path Route path with special enclosing
+	 *     characters:
+	 *     - '< >' for dynamic URL parameter without '/'
+	 *     - '{ }' for dynamic URL parameter with '/'
+	 * @return array A duple with values:
+	 *     - a regular expression to match against request path
+	 *     - an array containing keys that will be used to create
+	 *       dynamic variables with whatever matches the previous
+	 *       regex
+	 * @see route() for usage.
 	 */
-	private function _path_parse($valid=true, $params=[], $frac, $reqs) {
-
-		// fraction and request run out
-		if (!$frac && !$reqs)
-			return [$valid, $params, $frac, $reqs];
-		if (!isset($frac[0]) && !isset($reqs[0]))
-			return [$valid, $params, $frac, $reqs];
-
-		// either fraction or request runs out
-		if (!isset($frac[0]) && isset($reqs[0]))
-			return [false];
-		if (isset($frac[0]) && !isset($reqs[0]))
-			return [false];
-
-		$key = $frac[0];
-		if ($key[0] == '<' && $key[strlen($key)-1] == '>') {
-			// parse <key> to $params
-			$key = substr($key, 1, strlen($key) - 2);
-			$params[$key] = $reqs[0];
-		} else {
-			// fraction and request don't match
-			if ($key != $reqs[0])
-				return [false];
+	public static function path_parser($path) {
+		if (false === @preg_match_all(
+			'!(' .
+				'<[a-zA-Z][a-zA-Z0-9\_]*>' .
+			'|' .
+				'{[a-zA-Z][a-zA-Z0-9\_/]*}' .
+			')!',
+			$path, $tokens, PREG_OFFSET_CAPTURE)
+		) {
+			throw new \Exception(
+				sprintf("Invalid route path: '%s'.", $path));
 		}
 
-		// shift
-		array_shift($frac);
-		array_shift($reqs);
+		$keys = [];
+		$symbols = [];
+		$valid_chars = 'a-zA-Z0-9\_\.\-';
+		foreach ($tokens[0] as $t) {
+			$keys[] = str_replace(['{','}','<','>'], '', $t[0]);
+			$replacement = $valid_chars;
+			if (strpos($t[0], '{') !== false)
+				$replacement .= '/';
+				#'([a-zA-Z0-9\_]+)' : '([a-zA-Z0-9\_/]+)';
+			$replacement = '([' . $replacement . ']+)';
+			$symbols[] = [$replacement, $t[1], strlen($t[0])];
+		}
 
-		// recurse
-		return $this->_path_parse(true, $params, $frac, $reqs);
+		$pattern = '';
+		$n = 0;
+		while ($n < strlen($path)) {
+			$matched = false;
+			foreach ($symbols as $s) {
+				if ($n < $s[1]) {
+					continue;
+				}
+				if ($n == $s[1]) {
+					$matched = true;
+					$pattern .= $s[0];
+					$n++;
+					$n += $s[2] - 1;
+				}
+			}
+			if (!$matched) {
+				$pattern .= $path[$n];
+				$n++;
+			}
+		}
+		return [$pattern, $keys];
 	}
 
 	/**
@@ -160,9 +190,11 @@ class Router extends Header {
 	 */
 	public function route($path, $callback, $method='GET') {
 
-		/* ******** */
-		/* callback */
-		/* ******** */
+		# request has been handled
+		if ($this->request_handled)
+			return;
+
+		// verify callback
 
 		if (is_string($callback)) {
 			if (!function_exists($callback))
@@ -170,6 +202,8 @@ class Router extends Header {
 		} elseif (!is_object($callback)) {
 			return $this->abort(501);
 		}
+
+		// verify request method
 
 		$request_method = isset($_SERVER['REQUEST_METHOD'])
 			? $_SERVER['REQUEST_METHOD'] : 'GET';
@@ -182,55 +216,53 @@ class Router extends Header {
 			$methods = array_merge($method, ['HEAD']);
 		}
 		$methods = array_unique($methods);
+		# keep methods in collection for later deciding whether
+		# it's 404 or 501 on shutdown function
 		foreach ($methods as $m) {
 			if (!in_array($m, $this->method_collection))
 				$this->method_collection[] = $m;
 		}
-		if (!in_array($request_method, $methods)) {
+		if (!in_array($request_method, $methods))
 			return;
-		}
 
-		/* ***** */
-		/* route */
-		/* ***** */
+		// verify path
 
 		# path is empty
 		if (!$path || $path[0] != '/')
 			return;
 		# ignore trailing slash
-		$path = rtrim($path, '/');
+		if ($path != '/')
+			$path = rtrim($path, '/');
 
 		# init variables
 		$arg = [];
+		$arg['method'] = $request_method;
 		$arg['params'] = [];
 
-		# parse URL
-		$frac = explode('/', substr($path, 1, strlen($path)));
-		$reqs = explode('/', $this->request_path);
-		if ($frac != $reqs) {
-			if (!$frac[0])
+		if ($path != $this->request_path) {
+			$parser = $this->path_parser($path);
+			if (!$parser[1])
 				return;
-			$parsed = $this->_path_parse(true, [], $frac, $reqs);
-			if ($parsed[0] === false)
-				# path doesn't match
+			$pattern = '!^' . $parser[0] . '$!';
+			$matched = preg_match_all(
+				$pattern, $this->request_path,
+				$result, PREG_SET_ORDER);
+			if (!$matched)
 				return;
-			$arg['params'] = $parsed[1];
+			unset($result[0][0]);
+			$arg['params'] = array_combine(
+				$parser[1], $result[0]);
 		}
 
-		/* ************ */
-		/* route method */
-		/* ************ */
+		// collect method-path pair
 
-
-		# process method-path pair only once
 		$method_path = strtolower($request_method) . ':' . $path;
 		if (in_array($method_path, $this->request_routes))
+			# process method-path pair only once
 			return;
 		$this->request_routes[] = $method_path;
 
-		/* ********* */
-		/* http vars */
-		/* ********* */
+		// initialize HTTP variables
 
 		$arg['get'] = $_GET;
 		$arg['post'] = $_POST;
@@ -239,6 +271,9 @@ class Router extends Header {
 		$arg['delete'] = null;
 		$arg['cookie'] = $_COOKIE;
 		$args['header'] = [];
+
+		// populate custom headers
+
 		foreach ($_SERVER as $key => $val) {
 			if (strpos($key, 'HTTP_') === 0) {
 				$key = substr($key, 5, strlen($key));
@@ -247,13 +282,10 @@ class Router extends Header {
 			}
 		}
 
-		/* ************** */
-		/* request method */
-		/* ************** */
+		// populate HTTP variables
 
-		$arg['method'] = $request_method;
 		if (in_array($request_method, ['HEAD', 'GET', 'OPTIONS'])) {
-			# HEAD, GET
+			# HEAD, GET, OPTIONS execute immediately
 			$this->request_handled = true;
 			$this->wrap_callback($callback, $arg);
 			return;
@@ -273,9 +305,7 @@ class Router extends Header {
 			return $this->abort(501);
 		}
 
-		/* **************** */
-		/* execute callback */
-		/* **************** */
+		// execute callback
 
 		$this->request_handled = true;
 		$this->wrap_callback($callback, $arg);

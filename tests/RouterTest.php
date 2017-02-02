@@ -131,6 +131,22 @@ class RouterTest extends TestCase {
 		$this->assertEquals($var2, 6);
 	}
 
+	public function test_path_long_variables() {
+		/**
+		 * @caveat
+		 *   When using PHP builtin webserver, do not use path
+		 *   with dot somewhere, e.g. `/ver/1.20/dl` or `/dl/thing.jpg`.
+		 *   PHP will find it in file system instead of using index.php.
+		 */
+		$ret = self::request([
+			'url' => '/some/body/has/2x/that/ends/with/thing',
+			'expect_json' => true]);
+		$this->assertEquals($ret[0], 200);
+		extract($ret[1]['data']['params']);
+		$this->assertEquals($dir, 'body/has/2x');
+		$this->assertEquals($file, 'thing');
+	}
+
 	public function test_redirect() {
 		$ret = self::request([
 			'url' => '/some/thing',
