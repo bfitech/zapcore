@@ -85,7 +85,8 @@ class Common {
 	 * @param array $custom_opts Custom cURL options to add or
 	 *     override defaults.
 	 * @param bool $expect_json Automatically JSON-decode response
-	 *     if this is set to true.
+	 *     if this is set to true. This has nothing to do with
+	 *     'Accept: application/json' request header.
 	 * @return array A list of the form [HTTP code, response body].
 	 *     HTTP code is -1 for invalid method, 0 for failing request,
 	 *     and any of standard code for successful request.
@@ -100,21 +101,15 @@ class Common {
 				"cURL extension not installed.");
 
 		if (is_array($url_or_kwargs)) {
-			$kwargs = $url_or_kwargs;
-			if (!isset($kwargs['method']))
-				$kwargs['method'] = 'GET';
-			if (!isset($kwargs['headers']))
-				$kwargs['headers'] = [];
-			if (!isset($kwargs['get']))
-				$kwargs['get'] = [];
-			if (!isset($kwargs['post']))
-				$kwargs['post'] = [];
-			if (!isset($kwargs['custom_opts']))
-				$kwargs['custom_opts'] = [];
-			if (!isset($kwargs['expect_json']))
-				$kwargs['expect_json'] = false;
-			extract($kwargs);
-			unset($kwargs);
+			extract(self::extract_kwargs($url_or_kwargs, [
+				'url' => null,
+				'method' => 'GET',
+				'headers'=> [],
+				'get' => [],
+				'post' => [],
+				'custom_opts' => [],
+				'expect_json' => [],
+			]));
 		} else {
 			$url = $url_or_kwargs;
 		}
@@ -201,6 +196,9 @@ class Common {
 	/**
 	 * Initiate a kwargs array for safe extraction.
 	 *
+	 * This will remove keys not available in $init_array instead
+	 * of filling in holes in input array.
+	 *
 	 * @param array $input_array Input array, typically first
 	 *     parameter in a method.
 	 * @param array $init_array Fallback array when input array
@@ -210,10 +208,9 @@ class Common {
 	public static function extract_kwargs($input_array, $init_array) {
 		foreach ($init_array as $key => $val) {
 			if (isset($input_array[$key]))
-				continue;
-			$input_array[$key] = $val;
+				$init_array[$key] = $input_array[$key];
 		}
-		return $input_array;
+		return $init_array;
 	}
 
 }

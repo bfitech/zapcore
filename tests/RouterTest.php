@@ -64,6 +64,21 @@ class RouterTest extends TestCase {
 			zc\Common::check_dict(['a' => 1, 'b' => ' '], ['b'], true),
 			false
 		);
+
+		extract(zc\Common::extract_kwargs([
+			'a' => 1,
+			'b' => 'x',
+			'd' => [],
+		], [
+			'a' => null,
+			'b' => 'x',
+			'c' => false,
+		]));
+		$this->assertEquals(isset($c), true);
+		$this->assertEquals(isset($d), false);
+		$this->assertEquals($a, 1);
+		$this->assertEquals($b, 'x');
+		$this->assertEquals($c, false);
 	}
 
 	public function test_header() {
