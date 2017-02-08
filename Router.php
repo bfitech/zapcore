@@ -412,9 +412,9 @@ EOD;
 	/**
 	 * Default static file.
 	 */
-	private function _static_file_default($path, $disposition=false) {
+	private function _static_file_default($path, $cache=0, $disposition=false) {
 		if (file_exists($path))
-			$this->send_header($path, 3600, 1, 200, $disposition);
+			$this->send_header($path, $cache, 1, 200, $disposition);
 		$this->abort(404);
 	}
 
