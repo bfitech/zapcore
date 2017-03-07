@@ -3,6 +3,10 @@
 
 namespace BFITech\ZapCore;
 
+
+/**
+ * Header class.
+ */
 class Header {
 
 	/**
@@ -62,6 +66,13 @@ class Header {
 		510 => 'Not Extended'
 	];
 
+	/**
+	 * Get HTTP code.
+	 *
+	 * @param int $code HTTP code.
+	 * @return array A dict containing code and message if
+	 *     $code is valid, otherwise 404 dict.
+	 */
 	public static function get_header_string($code) {
 		if (self::$header_string[$code] === null)
 			$code = 404;

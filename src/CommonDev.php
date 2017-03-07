@@ -7,6 +7,10 @@ use BFITech\ZapCore as zc;
 
 class CoreDevError extends \Exception {}
 
+
+/**
+ * CoreDev class.
+ */
 class CoreDev {
 
 

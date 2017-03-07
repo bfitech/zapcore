@@ -5,6 +5,10 @@ namespace BFITech\ZapCore;
 
 class CommonError extends \Exception {}
 
+
+/**
+ * Common class.
+ */
 class Common {
 
 	/**
@@ -175,7 +179,7 @@ class Common {
 	 * @param array $keys List of keys to verify aganst.
 	 * @param bool $trim Whether it should treat everything as string
 	 *     and trim the values and drop keys of those with empty values.
-	 * @param bool|array False on failure, filtered dict otherwise.
+	 * @return bool|array False on failure, filtered dict otherwise.
 	 */
 	public static function check_dict($array, $keys, $trim=false) {
 		$checked = [];

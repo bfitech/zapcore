@@ -4,6 +4,9 @@
 namespace BFITech\ZapCore;
 
 
+/**
+ * Router class.
+ */
 class Router extends Header {
 
 	private $request_path = null;
@@ -412,7 +415,9 @@ EOD;
 	/**
 	 * Default static file.
 	 */
-	private function _static_file_default($path, $cache=0, $disposition=false) {
+	private function _static_file_default(
+		$path, $cache=0, $disposition=false
+	) {
 		if (file_exists($path))
 			$this->send_header($path, $cache, 1, 200, $disposition);
 		$this->abort(404);
@@ -421,14 +426,14 @@ EOD;
 	/**
 	 * Static file.
 	 *
-	 * This can be changed in a subclass but it can be more convenient
-	 * if we just replace it with $this->static_file_custom().
+	 * This can be changed in a subclass but sometimes it can be more
+	 * convenient if we just replace it with $this->static_file_custom().
 	 *
 	 * @param string $path Absolute path to file.
 	 * @param bool|string $disposition Set content-disposition in header.
 	 *     See $this->send_header().
-	 * @example
 	 *
+	 * @code
 	 * $app = new Route();
 	 * $custom = function($path, $disp=false) using($app) {
 	 *     $app->abort(503);
@@ -436,6 +441,7 @@ EOD;
 	 * // $app->static_file = $custom; # this doesn't work
 	 * $app->static_file_custom = $custom;
 	 * $app->route('/static/<path>/currently/unavailable/<path>');
+	 * @endcode
 	 */
 	public function static_file($path, $disposition=false) {
 		if (!isset($this->static_file_custom))
