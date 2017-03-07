@@ -91,13 +91,15 @@ class Common {
 	 * @param bool $expect_json Automatically JSON-decode response
 	 *     if this is set to true. This has nothing to do with
 	 *     'Accept: application/json' request header.
+	 * @param bool $is_raw If true, do not format request body as HTTP
+	 *     query.
 	 * @return array A list of the form [HTTP code, response body].
 	 *     HTTP code is -1 for invalid method, 0 for failing request,
 	 *     and any of standard code for successful request.
 	 */
 	public static function http_client(
 		$url_or_kwargs, $method='GET', $headers=[], $get=[], $post=[],
-		$custom_opts=[], $expect_json=false
+		$custom_opts=[], $expect_json=false, $is_raw=false
 	) {
 
 		if (!function_exists('curl_setopt'))
@@ -112,7 +114,8 @@ class Common {
 				'get' => [],
 				'post' => [],
 				'custom_opts' => [],
-				'expect_json' => [],
+				'expect_json' => false,
+				'is_raw' => false,
 			]));
 		} else {
 			$url = $url_or_kwargs;
@@ -154,8 +157,9 @@ class Common {
 			# noop
 		} elseif (in_array($method, ['POST', 'PUT', 'DELETE'])) {
 			curl_setopt($conn, CURLOPT_CUSTOMREQUEST, $method);
-			curl_setopt($conn, CURLOPT_POSTFIELDS,
-				http_build_query($post));
+			if (!$is_raw && is_array($post))
+				$post = http_build_query($post);
+			curl_setopt($conn, CURLOPT_POSTFIELDS, $post);
 		} else {
 			# TRACE, PATCH, etc. are not supported ... yet?
 			return [-1, null];

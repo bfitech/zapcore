@@ -18,6 +18,10 @@ $core->route('/', function($args) use($core) {
 	]);
 }, 'POST');
 
+$core->route('/raw', function($args) use($core) {
+	$core->print_json(0, $args['post']);
+}, 'POST', true);
+
 $core->route('/json', function($args) use($core) {
 	if ($args['method'] == 'GET')
 		$core->print_json(0, 1);

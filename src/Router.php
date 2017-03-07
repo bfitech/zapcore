@@ -190,8 +190,13 @@ class Router extends Header {
 	 *     Callback takes one argument containing HTTP variables
 	 *     collected by route processor.
 	 * @param string $method HTTP request method.
+	 * @param bool $is_raw Accept raw data instead of parsed
+	 *     HTTP query. Only applicable for POST method. Useful in,
+	 *     e.g. JSON request body.
 	 */
-	public function route($path, $callback, $method='GET') {
+	public function route(
+		$path, $callback, $method='GET', $is_raw=false
+	) {
 
 		# request has been handled
 		if ($this->request_handled)
@@ -268,7 +273,7 @@ class Router extends Header {
 		// initialize HTTP variables
 
 		$arg['get'] = $_GET;
-		$arg['post'] = $_POST;
+		$arg['post'] = [];
 		$arg['files'] = [];
 		$arg['put'] = null;
 		$arg['delete'] = null;
@@ -294,6 +299,8 @@ class Router extends Header {
 			return;
 		}
 		if ($request_method == 'POST') {
+			$arg['post'] = $is_raw ?
+				file_get_contents("php://input") : $_POST;
 			# POST, FILES
 			if (isset($_FILES) && !empty($_FILES))
 				$arg['files'] = $_FILES;

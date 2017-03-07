@@ -24,11 +24,11 @@ class RouterTest extends TestCase {
 
 	public static function client(
 		$url_or_kwargs, $method='GET', $header=[], $get=[], $post=[],
-		$curl_opts=[], $expect_json=false
+		$curl_opts=[], $expect_json=false, $is_raw=false
 	) {
 		return zc\Common::http_client(
 			$url_or_kwargs, $method, $header, $get, $post,
-			$curl_opts, $expect_json);
+			$curl_opts, $expect_json, $is_raw);
 	}
 
 	public static function request($kwargs) {
@@ -93,6 +93,12 @@ class RouterTest extends TestCase {
 		$this->assertEquals($data['home'], '/');
 		$srv = trim(self::$server_addr, '/') . '/';
 		$this->assertEquals($data['host'], $srv);
+
+		$data = json_encode(['x' => 1, 'y' => 2]);
+		$ret = self::client(self::$server_addr . '/raw', 'POST',
+			[], [], $data, [], true, true);
+		$this->assertEquals($ret[0], 200);
+		$this->assertEquals($ret[1]['data'], $data);
 	}
 
 	public function test_header() {
