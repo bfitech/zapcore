@@ -11,6 +11,13 @@ $core->route('/', function($args) use($core) {
 	echo "Hello Friend";
 });
 
+$core->route('/', function($args) use($core) {
+	$core->print_json(0, [
+		'home' => $core->get_home(),
+		'host' => $core->get_host(),
+	]);
+}, 'POST');
+
 $core->route('/json', function($args) use($core) {
 	if ($args['method'] == 'GET')
 		$core->print_json(0, 1);

@@ -81,6 +81,20 @@ class RouterTest extends TestCase {
 		$this->assertEquals($c, false);
 	}
 
+	public function test_environment() {
+		$ret = self::client(self::$server_addr . '/');
+		$this->assertEquals($ret[0], 200);
+		$this->assertEquals($ret[1], 'Hello Friend');
+
+		$ret = self::client(self::$server_addr . '/', 'POST',
+			[], [], [], [], true);
+		$this->assertEquals($ret[0], 200);
+		$data = $ret[1]['data'];
+		$this->assertEquals($data['home'], '/');
+		$srv = trim(self::$server_addr, '/') . '/';
+		$this->assertEquals($data['host'], $srv);
+	}
+
 	public function test_header() {
 		$ret = self::client(self::$server_addr . '/json', 'GET',
 			[], [], [], [], true);

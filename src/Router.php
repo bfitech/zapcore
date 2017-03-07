@@ -79,7 +79,7 @@ class Router extends Header {
 				$port = null;
 			if ($port == 443 && $prot == 'https')
 				$port = null;
-			if ($port)
+			if ($port && strpos($host, ':') === false)
 				$host .= ':' . $port;
 			$host = $prot . $host . $this->_home;
 			$this->_host = $host;
