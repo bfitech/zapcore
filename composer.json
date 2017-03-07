@@ -15,12 +15,12 @@
     },
     "autoload": {
         "psr-4": {
-            "BFITech\\ZapCore\\": ""
+            "BFITech\\ZapCore\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "BFITech\\ZapCoreDev\\": ""
+            "BFITech\\ZapCoreDev\\": "src"
         }
     }
 }
