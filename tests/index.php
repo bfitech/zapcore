@@ -16,6 +16,7 @@ $core->route('/', function($args) use($core) {
 $core->route('/#', function($args){});
 $core->route('/xnocb', null);
 $core->route('/xtrace', function($args){}, 'TRACE');
+$core->route('/x1/<path>/x2/{path}', function($args){});
 
 $core->route('/', function($args) use($core) {
 	$core->print_json(0, [

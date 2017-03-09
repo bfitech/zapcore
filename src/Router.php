@@ -139,6 +139,7 @@ class Router extends Header {
 
 		$valid_chardelims = $valid_chars . '\/<>\{\}'; 
 		if (!preg_match('!^[' . $valid_chardelims . ']+$!', $path)) {
+			# never allow invalid characters
 			self::$logger->error(
 				sprintf("Router: path invalid: '%s'.", $path));
 			return [[], []];
@@ -161,6 +162,12 @@ class Router extends Header {
 				$replacement .= '/';
 			$replacement = '([' . $replacement . ']+)';
 			$symbols[] = [$replacement, $t[1], strlen($t[0])];
+		}
+		if (count($keys) > count(array_unique($keys))) {
+			# never allow key reuse to prevent unexpected overrides
+			self::$logger->error(sprintf(
+				"Router: param keys reused: '%s'.", $path));
+			return [[], []];
 		}
 
 		$pattern = '';
