@@ -54,7 +54,7 @@ class Router extends Header {
 	 *
 	 * Without this, methods added to instance can't be called.
 	 */
-	public function __call($method, $args) {
+	final public function __call($method, $args) {
 		if (isset($this->$method)) {
 			$fn = $this->$method;
 			return call_user_func_array($fn, $args);
@@ -125,8 +125,8 @@ class Router extends Header {
 	 *
 	 * @param string $path Route path with special enclosing
 	 *     characters:
-	 *     - '< >' for dynamic URL parameter without '/'
-	 *     - '{ }' for dynamic URL parameter with '/'
+	 *     - `< >` for dynamic URL parameter without `/`
+	 *     - `{ }` for dynamic URL parameter with `/`
 	 * @return array A duple with values:
 	 *     - a regular expression to match against request path
 	 *     - an array containing keys that will be used to create
@@ -134,7 +134,7 @@ class Router extends Header {
 	 *       regex
 	 * @see $this->route() for usage.
 	 */
-	public static function path_parser($path) {
+	final public static function path_parser($path) {
 		$valid_chars = 'a-zA-Z0-9\_\.\-@%';
 
 		$valid_chardelims = $valid_chars . '\/<>\{\}'; 
@@ -190,7 +190,7 @@ class Router extends Header {
 	 * Callback wrapper.
 	 *
 	 * Override this for more decorator-like processing. Make sure
-	 * the patch always ends with die().
+	 * the override always ends with die().
 	 */
 	public function wrap_callback($callback, $args=[]) {
 		self::$logger->info(sprintf("Router: %s '%s'.",
@@ -212,7 +212,7 @@ class Router extends Header {
 	 *     HTTP query. Only applicable for POST method. Useful in,
 	 *     e.g. JSON request body.
 	 */
-	public function route(
+	final public function route(
 		$path, $callback, $method='GET', $is_raw=false
 	) {
 
@@ -350,7 +350,7 @@ class Router extends Header {
 	/**
 	 * Default abort method.
 	 */
-	private function _abort_default($code) {
+	private function abort_default($code) {
 		extract(self::get_header_string($code));
 		$this->send_header(0, 0, 0, $code);
 		$html = <<<EOD
@@ -382,17 +382,20 @@ EOD;
 	}
 
 	/**
-	 * Abort method.
+	 * Abort.
+	 *
+	 * Use $this->abort_custom() to customize, either in a
+	 * subclass or patched instance.
 	 *
 	 * @param int $code HTTP error code.
 	 */
-	public function abort($code) {
+	final public function abort($code) {
 		$this->request_handled = true;
 		self::$logger->info(sprintf(
 			"Router: abort %s: '%s'.",
 			$code, $this->request_path));
 		if (!isset($this->abort_custom))
-			$this->_abort_default($code);
+			$this->abort_default($code);
 		else
 			$this->abort_custom($code);
 		die();
@@ -401,7 +404,7 @@ EOD;
 	/**
 	 * Default redirect.
 	 */
-	private function _redirect_default($destination) {
+	private function redirect_default($destination) {
 		extract(self::get_header_string(301));
 		$this->send_header(0, 0, 0, $code);
 		@header("Location: $destination");
@@ -432,20 +435,20 @@ EOD;
 	}
 
 	/**
-	 * Redirect method.
+	 * Redirect.
 	 *
-	 * Patch this or set $this->redirect_custom for custom
-	 * redirect page.
+	 * Use $this->redirect_custom() to customize, either in a
+	 * subclass or patched instance.
 	 *
 	 * @param string $destination Destination URL.
 	 */
-	public function redirect($destination) {
+	final public function redirect($destination) {
 		$this->request_handled = true;
 		self::$logger->info(sprintf(
 			"Router: redirect: '%s' -> '%s'.",
 			$this->request_path, $destination));
 		if (!isset($this->redirect_custom))
-			$this->_redirect_default($destination);
+			$this->redirect_default($destination);
 		else
 			$this->redirect_custom($destination);
 		die();
@@ -454,7 +457,7 @@ EOD;
 	/**
 	 * Default static file.
 	 */
-	private function _static_file_default(
+	private function static_file_default(
 		$path, $cache=0, $disposition=false
 	) {
 		if (file_exists($path))
@@ -465,8 +468,8 @@ EOD;
 	/**
 	 * Static file.
 	 *
-	 * This can be changed in a subclass but sometimes it can be more
-	 * convenient if we just replace it with $this->static_file_custom().
+	 * Use $this->static_file_custom() to customize, either in a
+	 * subclass or patched instance.
 	 *
 	 * @param string $path Absolute path to file.
 	 * @param bool|string $disposition Set content-disposition in header.
@@ -477,14 +480,16 @@ EOD;
 	 * $custom = function($path, $disp=false) using($app) {
 	 *     $app->abort(503);
 	 * };
-	 * // $app->static_file = $custom; # this doesn't work
+	 * # this doesn't work
+	 * // $app->static_file = $custom;
+	 * # this does
 	 * $app->static_file_custom = $custom;
-	 * $app->route('/static/<path>/currently/unavailable/<path>');
+	 * $app->route('/static/<path>/currently/unavailable');
 	 * @endcode
 	 */
-	public function static_file($path, $disposition=false) {
+	final public function static_file($path, $disposition=false) {
 		if (!isset($this->static_file_custom))
-			return $this->_static_file_default($path, $disposition);
+			return $this->static_file_default($path, $disposition);
 		self::$logger->info(sprintf("Router: static: '%s'.",
 			$path));
 		return $this->static_file_custom($path, $disposition);
@@ -495,7 +500,7 @@ EOD;
 	 *
 	 * If no request is handled at this point, show a 501.
 	 */
-	public function shutdown() {
+	final public function shutdown() {
 		if ($this->request_handled)
 			return;
 		$code = 501;
