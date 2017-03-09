@@ -11,8 +11,11 @@ class RouterTest extends TestCase {
 
 	public static $server_pid;
 	public static $server_addr = 'http://127.0.0.1:9999';
+	public static $logfile = '/tmp/zc.log';
 
 	public static function setUpBeforeClass() {
+		if (file_exists(self::$logfile))
+			@unlink(self::$logfile);
 		self::$server_pid = zd\CoreDev::server_up(__DIR__);
 		if (!self::$server_pid)
 			die();
@@ -99,6 +102,13 @@ class RouterTest extends TestCase {
 			[], [], $data, [], true, true);
 		$this->assertEquals($ret[0], 200);
 		$this->assertEquals($ret[1]['data'], $data);
+
+		# curl wrapper doesn't support CONNECT
+		$ret = self::request([
+			'url' => '/xpatch',
+			'method' => 'CONNECT',
+		]);
+		$this->assertEquals($ret[0], -1);
 	}
 
 	public function test_header() {
@@ -154,6 +164,13 @@ class RouterTest extends TestCase {
 		$this->assertEquals($ret[1]['data'][0], 'PUT');
 		parse_str($ret[1]['data'][1], $recv);
 		$this->assertEquals($data, $recv);
+
+		# trace is not supported
+		$ret = self::request([
+			'url' => '/xtrace',
+			'method' => 'TRACE',
+		]);
+		$this->assertEquals($ret[0], 405);
 	}
 
 	public function test_path_variables() {

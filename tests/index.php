@@ -5,11 +5,17 @@ require(__DIR__ . './../vendor/autoload.php');
 
 use BFITech\ZapCore as zc;
 
-$core = new zc\Router();
+$logger = new zc\Logger(zc\Logger::DEBUG, '/tmp/zc.log');
+$core = new zc\Router(null, null, true, $logger);
 
 $core->route('/', function($args) use($core) {
 	echo "Hello Friend";
 });
+
+# route errors
+$core->route('/#', function($args){});
+$core->route('/xnocb', null);
+$core->route('/xtrace', function($args){}, 'TRACE');
 
 $core->route('/', function($args) use($core) {
 	$core->print_json(0, [
@@ -56,3 +62,4 @@ $core->route('/put/it/down', function($args) use($core){
 	$data = $args[strtolower($method)];
 	$core->print_json(0, [$method, $data]);
 }, ['PUT', 'POST']);
+

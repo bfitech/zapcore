@@ -155,13 +155,15 @@ class Common {
 			curl_setopt($conn, CURLOPT_HEADER, true);
 		} elseif ($method == 'GET') {
 			# noop
-		} elseif (in_array($method, ['POST', 'PUT', 'DELETE'])) {
+		} elseif (in_array($method, [
+			'POST', 'PUT', 'DELETE', 'PATCH', 'TRACE',
+		])) {
 			curl_setopt($conn, CURLOPT_CUSTOMREQUEST, $method);
 			if (!$is_raw && is_array($post))
 				$post = http_build_query($post);
 			curl_setopt($conn, CURLOPT_POSTFIELDS, $post);
 		} else {
-			# TRACE, PATCH, etc. are not supported ... yet?
+			# CONNECT etc. are not supported ... yet?
 			return [-1, null];
 		}
 

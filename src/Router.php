@@ -21,6 +21,8 @@ class Router extends Header {
 	private $method_collection = [];
 	private $current_method = null;
 
+	/** Logging service. */
+	public static $logger = null;
 
 	/**
 	 * Constructor.
@@ -30,11 +32,19 @@ class Router extends Header {
 	 * @param bool $shutdown Whether shutdown function should be
 	 *     invoked at the end. Useful for multiple routers in one
 	 *     project.
+	 * @param string $logger Logging service, an instance of Logger
+	 *     class.
 	 */
-	public function __construct($home=null, $host=null, $shutdown=true) {
+	public function __construct(
+		$home=null, $host=null, $shutdown=true, $logger=null
+	) {
+		self::$logger = $logger ? $logger : new Logger();
+		self::$logger->debug('Router: started.');
+
 		$this->_home = $home;
 		$this->_host = $host;
 		$this->_request_parse();
+
 		if ($shutdown)
 			register_shutdown_function([$this, 'shutdown']);
 	}
@@ -102,6 +112,9 @@ class Router extends Header {
 		# store in private variables
 		$this->request_path = '/' . $req;
 		$this->request_comp = explode('/', $req);
+		self::$logger->debug(sprintf(
+			"Router: request path: '%s'.",
+			$this->request_path));
 	}
 
 	/**
@@ -119,30 +132,33 @@ class Router extends Header {
 	 *     - an array containing keys that will be used to create
 	 *       dynamic variables with whatever matches the previous
 	 *       regex
-	 * @see route() for usage.
+	 * @see $this->route() for usage.
 	 */
 	public static function path_parser($path) {
-		if (false === @preg_match_all(
+		$valid_chars = 'a-zA-Z0-9\_\.\-@%';
+
+		$valid_chardelims = $valid_chars . '\/<>\{\}'; 
+		if (!preg_match('!^[' . $valid_chardelims . ']+$!', $path)) {
+			self::$logger->error(
+				sprintf("Router: path invalid: '%s'.", $path));
+			return [[], []];
+		}
+
+		preg_match_all(
 			'!(' .
 				'<[a-zA-Z][a-zA-Z0-9\_]*>' .
 			'|' .
-				'{[a-zA-Z][a-zA-Z0-9\_/]*}' .
+				'\{[a-zA-Z][a-zA-Z0-9\_/]*\}' .
 			')!',
-			$path, $tokens, PREG_OFFSET_CAPTURE)
-		) {
-			throw new \Exception(
-				sprintf("Invalid route path: '%s'.", $path));
-		}
+			$path, $tokens, PREG_OFFSET_CAPTURE);
 
 		$keys = [];
 		$symbols = [];
-		$valid_chars = 'a-zA-Z0-9\_\.\-';
 		foreach ($tokens[0] as $t) {
 			$keys[] = str_replace(['{','}','<','>'], '', $t[0]);
 			$replacement = $valid_chars;
 			if (strpos($t[0], '{') !== false)
 				$replacement .= '/';
-				#'([a-zA-Z0-9\_]+)' : '([a-zA-Z0-9\_/]+)';
 			$replacement = '([' . $replacement . ']+)';
 			$symbols[] = [$replacement, $t[1], strlen($t[0])];
 		}
@@ -177,6 +193,8 @@ class Router extends Header {
 	 * the patch always ends with die().
 	 */
 	public function wrap_callback($callback, $args=[]) {
+		self::$logger->info(sprintf("Router: %s '%s'.",
+			$this->current_method, $this->request_path));
 		$callback($args);
 		die();
 	}
@@ -205,10 +223,15 @@ class Router extends Header {
 		// verify callback
 
 		if (is_string($callback)) {
-			if (!function_exists($callback))
-				return $this->abort(501);
+			if (!function_exists($callback)) {
+				self::$logger->error(sprintf(
+					"Router: callback invalid in '%s'.", $path));
+				return;
+			}
 		} elseif (!is_object($callback)) {
-			return $this->abort(501);
+			self::$logger->error(sprintf(
+				"Router: callback invalid in '%s'.", $path));
+			return;
 		}
 
 		// verify request method
@@ -277,6 +300,7 @@ class Router extends Header {
 		$arg['files'] = [];
 		$arg['put'] = null;
 		$arg['delete'] = null;
+		$arg['patch'] = null;
 		$arg['cookie'] = $_COOKIE;
 		$args['header'] = [];
 
@@ -299,20 +323,22 @@ class Router extends Header {
 			return;
 		}
 		if ($request_method == 'POST') {
+			# POST, FILES
 			$arg['post'] = $is_raw ?
 				file_get_contents("php://input") : $_POST;
-			# POST, FILES
 			if (isset($_FILES) && !empty($_FILES))
 				$arg['files'] = $_FILES;
-		} elseif ($request_method == 'PUT') {
-			# PUT
-			$arg['put'] = file_get_contents("php://input");
-		} elseif ($request_method == 'DELETE') {
-			# DELETE
-			$arg['delete'] = file_get_contents("php://input");
+		} elseif (in_array($request_method, [
+			'PUT', 'DELETE', 'PATCH'
+		])) {
+			$arg[strtolower($request_method)] = file_get_contents(
+				"php://input");
 		} else {
-			# PATCH, TRACE
-			return $this->abort(501);
+			# TRACE, CONNECT, etc. In case webserver haven't disabled them.
+			self::$logger->warning(sprintf(
+				"Router: %s not supported in '%s'.",
+				$request_method, $this->request_path));
+			return $this->abort(405);
 		}
 
 		// execute callback
@@ -362,6 +388,9 @@ EOD;
 	 */
 	public function abort($code) {
 		$this->request_handled = true;
+		self::$logger->info(sprintf(
+			"Router: abort %s: '%s'.",
+			$code, $this->request_path));
 		if (!isset($this->abort_custom))
 			$this->_abort_default($code);
 		else
@@ -412,6 +441,9 @@ EOD;
 	 */
 	public function redirect($destination) {
 		$this->request_handled = true;
+		self::$logger->info(sprintf(
+			"Router: redirect: '%s' -> '%s'.",
+			$this->request_path, $destination));
 		if (!isset($this->redirect_custom))
 			$this->_redirect_default($destination);
 		else
@@ -453,6 +485,8 @@ EOD;
 	public function static_file($path, $disposition=false) {
 		if (!isset($this->static_file_custom))
 			return $this->_static_file_default($path, $disposition);
+		self::$logger->info(sprintf("Router: static: '%s'.",
+			$path));
 		return $this->static_file_custom($path, $disposition);
 	}
 
@@ -467,6 +501,9 @@ EOD;
 		$code = 501;
 		if (in_array($this->current_method, $this->method_collection))
 			$code = 404;
+		self::$logger->warning(sprintf(
+			"Router: shutdown %s in %s '%s'.",
+			$code, $this->current_method, $this->request_path));
 		$this->abort($code);
 	}
 
