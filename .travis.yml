@@ -7,8 +7,8 @@ php:
     - 5.6
 
 before_script:
-    - composer install -n -o --dev --prefer-source
+    - composer install -n -o --dev --prefer-dist
 
 script:
-    - phpunit --bootstrap ./vendor/autoload.php tests
+    - php ./vendor/bin/phpunit --bootstrap ./vendor/autoload.php tests
 
