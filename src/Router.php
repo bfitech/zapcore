@@ -137,7 +137,7 @@ class Router extends Header {
 	final public static function path_parser($path) {
 		$valid_chars = 'a-zA-Z0-9\_\.\-@%';
 
-		$valid_chardelims = $valid_chars . '\/<>\{\}'; 
+		$valid_chardelims = $valid_chars . '\/<>\{\}';
 		if (!preg_match('!^[' . $valid_chardelims . ']+$!', $path)) {
 			# never allow invalid characters
 			self::$logger->error(
@@ -536,7 +536,7 @@ EOD;
 	}
 
 	/**
-	 * Show request path without leading slash.
+	 * Show current request method.
 	 */
 	public function get_request_method() {
 		return $this->current_method;
