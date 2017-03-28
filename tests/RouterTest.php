@@ -8,12 +8,12 @@ use BFITech\ZapCoreDev as zd;
 
 class RouterTest extends TestCase {
 
-
 	public static $server_pid;
 	public static $server_addr = 'http://127.0.0.1:9999';
-	public static $logfile = __DIR__ . '/zapcore.log';
+	public static $logfile = null;
 
 	public static function setUpBeforeClass() {
+		self::$logfile = __DIR__ . '/zapcore.log';
 		if (file_exists(self::$logfile))
 			@unlink(self::$logfile);
 		self::$server_pid = zd\CoreDev::server_up(__DIR__);
