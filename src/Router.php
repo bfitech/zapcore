@@ -55,7 +55,7 @@ class Router extends Header {
 	 * Without this, methods added to instance can't be called.
 	 */
 	final public function __call($method, $args) {
-		if (isset($this->$method)) {
+		if (method_exists($this, $method)) {
 			$fn = $this->$method;
 			return call_user_func_array($fn, $args);
 		}
@@ -401,7 +401,7 @@ EOD;
 		self::$logger->info(sprintf(
 			"Router: abort %s: '%s'.",
 			$code, $this->request_path));
-		if (!isset($this->abort_custom))
+		if (!method_exists($this, 'abort_custom'))
 			$this->abort_default($code);
 		else
 			$this->abort_custom($code);
@@ -454,7 +454,7 @@ EOD;
 		self::$logger->info(sprintf(
 			"Router: redirect: '%s' -> '%s'.",
 			$this->request_path, $destination));
-		if (!isset($this->redirect_custom))
+		if (!method_exists($this, 'redirect_custom'))
 			$this->redirect_default($destination);
 		else
 			$this->redirect_custom($destination);
@@ -495,7 +495,7 @@ EOD;
 	 * @endcode
 	 */
 	final public function static_file($path, $disposition=false) {
-		if (!isset($this->static_file_custom))
+		if (!method_exists($this, 'static_file_custom'))
 			return $this->static_file_default($path, $disposition);
 		self::$logger->info(sprintf("Router: static: '%s'.",
 			$path));

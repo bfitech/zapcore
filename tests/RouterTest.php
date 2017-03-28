@@ -11,7 +11,7 @@ class RouterTest extends TestCase {
 
 	public static $server_pid;
 	public static $server_addr = 'http://127.0.0.1:9999';
-	public static $logfile = '/tmp/zc.log';
+	public static $logfile = __DIR__ . '/zapcore.log';
 
 	public static function setUpBeforeClass() {
 		if (file_exists(self::$logfile))
