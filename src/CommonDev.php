@@ -24,7 +24,7 @@ class CoreDev {
 	 * @param int $port Server port.
 	 * @return int PID of server process.
 	 */
-	public static function server_up($starting_point=null, $port=9999) {
+	final public static function server_up($starting_point=null, $port=9999) {
 
 		if (!$starting_point) {
 			$dir = getcwd();
@@ -91,7 +91,7 @@ class CoreDev {
 	 *
 	 * @param int $pid PID of test server.
 	 */
-	public static function server_down($pid) {
+	final public static function server_down($pid) {
 		exec("kill " . $pid);
 	}
 
