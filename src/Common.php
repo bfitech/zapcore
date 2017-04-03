@@ -19,7 +19,7 @@ class Common {
 	 *     placeholders in command.
 	 * @return bool|array False on failure, stdout lines otherwise.
 	 */
-	public static function exec($cmd, $args=[]) {
+	final public static function exec($cmd, $args=[]) {
 		foreach ($args as $k => $v)
 			$args[$k] = escapeshellarg($arg);
 		$cmd = vsprintf($cmd, $args);
@@ -35,7 +35,7 @@ class Common {
 	 * @param string $fname The file name.
 	 * @return string The MIME type or application/octet-stream.
 	 */
-	public static function get_mimetype($fname) {
+	final public static function get_mimetype($fname) {
 
 		$pi = pathinfo($fname);
 		if (isset($pi['extension'])) {
@@ -97,7 +97,7 @@ class Common {
 	 *     HTTP code is -1 for invalid method, 0 for failing request,
 	 *     and any of standard code for successful request.
 	 */
-	public static function http_client(
+	final public static function http_client(
 		$url_or_kwargs, $method='GET', $headers=[], $get=[], $post=[],
 		$custom_opts=[], $expect_json=false, $is_raw=false
 	) {
@@ -182,25 +182,47 @@ class Common {
 	 * Check if a dict contains all necessary keys.
 	 *
 	 * @param array $array Dict to verify.
-	 * @param array $keys List of keys to verify aganst.
+	 * @param array $keys List of keys to verify against.
 	 * @param bool $trim Whether it should treat everything as string
 	 *     and trim the values and drop keys of those with empty values.
 	 * @return bool|array False on failure, filtered dict otherwise.
 	 */
-	public static function check_dict($array, $keys, $trim=false) {
+	final public static function check_dict($array, $keys, $trim=false) {
 		$checked = [];
 		foreach ($keys as $key) {
 			if (!isset($array[$key]))
 				return false;
 			$val = $array[$key];
 			if ($trim) {
-				$val = trim((string)$val);
+				if (!is_string($val))
+					return false;
+				$val = trim($val);
 				if (!$val)
 					return false;
 			}
 			$checked[$key] = $val;
 		}
 		return $checked;
+	}
+
+	/**
+	 * Check if a dict contains all necessary keys with elements being
+	 * immutables, i.e. numeric or string.
+	 *
+	 * @param array $array Dict to verify.
+	 * @param array $keys List of keys to verify against.
+	 * @param bool $trim Whether it should treat everything as string
+	 *     and trim the values and drop keys of those with empty values.
+	 * @return bool|array False on failure, filtered dict otherwise.
+	 */
+	final public static function check_idict($array, $keys, $trim=false) {
+		if (false === $array = self::check_dict($array, $keys, $trim))
+			return false;
+		foreach ($array as $val) {
+			if (!is_numeric($val) && !is_string($val))
+				return false;
+		}
+		return $array;
 	}
 
 	/**
@@ -215,7 +237,7 @@ class Common {
 	 *     is not complete, of the form: `key => default value`.
 	 * @return array A complete array ready to be extract()ed.
 	 */
-	public static function extract_kwargs($input_array, $init_array) {
+	final public static function extract_kwargs($input_array, $init_array) {
 		foreach ($init_array as $key => $val) {
 			if (isset($input_array[$key]))
 				$init_array[$key] = $input_array[$key];

@@ -64,8 +64,44 @@ class RouterTest extends TestCase {
 			['b' => 2]
 		);
 		$this->assertEquals(
+			zc\Common::check_dict(['a' => 1, 'b' => '2 '], ['a', 'b'], true),
+			false
+		);
+		$this->assertEquals(
 			zc\Common::check_dict(['a' => 1, 'b' => ' '], ['b'], true),
 			false
+		);
+		$rv = zc\Common::check_dict(['a' => '1', 'b' => '2 '], ['a', 'b'], true);
+		$rs = ['a' => 1, 'b' => 2];
+		$this->assertEquals($rv, $rs);
+		$this->assertNotSame($rv, $rs);
+		$rv = array_map('intval', $rv);
+		$this->assertSame($rv, $rs);
+
+		$this->assertEquals(
+			zc\Common::check_idict(['a' => '1', 'b' => 'x '], ['a', 'b'], true),
+			['a' => 1, 'b' => 'x']
+		);
+
+		$this->assertEquals(
+			zc\Common::check_idict(['a' => 1, 'b' => []], ['b']),
+			false
+		);
+		$this->assertEquals(
+			zc\Common::check_idict(['a' => 1, 'b' => false], ['b']),
+			false
+		);
+		$this->assertEquals(
+			zc\Common::check_idict(['a' => 1, 'b' => null], ['b']),
+			false
+		);
+		$this->assertEquals(
+			zc\Common::check_idict(['a' => 1, 'b' => 0], ['b']),
+			['b' => 0]
+		);
+		$this->assertEquals(
+			zc\Common::check_idict(['a' => 1, 'b' => 'x'], ['b']),
+			['b' => 'x']
 		);
 
 		extract(zc\Common::extract_kwargs([

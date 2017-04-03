@@ -32,11 +32,11 @@ class Router extends Header {
 	 * @param bool $shutdown Whether shutdown function should be
 	 *     invoked at the end. Useful for multiple routers in one
 	 *     project.
-	 * @param string $logger Logging service, an instance of Logger
+	 * @param Logger $logger Logging service, an instance of Logger
 	 *     class.
 	 */
 	public function __construct(
-		$home=null, $host=null, $shutdown=true, $logger=null
+		$home=null, $host=null, $shutdown=true, Logger $logger=null
 	) {
 		self::$logger = $logger ? $logger : new Logger();
 		self::$logger->debug('Router: started.');
