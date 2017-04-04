@@ -38,21 +38,22 @@ class CoreDev {
 				throw new CoreDevError(sprintf(
 					"Invalid starting point: '%s'.",
 					$starting_point));
-				return null;
 			}
 		}
 
 		$port = (int)$port;
-		if ($port < 0  || $port > 65535) {
+		if ($port < 0  || $port > 65535)
 			throw new CoreDevError(sprintf(
 				"Invalid port number: '%s'.", $port));
-			return null;
-		}
 
 		$srv = 'http://127.0.0.1:' . $port;
 
 		# check if there's a server running
-		if (zc\Common::http_client($srv)[0] != 0)
+		# @note Client will obtain http_errno=0 if server is
+		#     down and http_errno=-1 if it doesn't support
+		#     current method. On the server side, root path of
+		#     running server is not necessarily returning 200.
+		if (zc\Common::http_client($srv)[0] > 0)
 			throw new CoreDevError(
 				"Server is running. Kill it with fire.");
 
@@ -69,19 +70,17 @@ class CoreDev {
 		$pid = $out[0];
 
 		# wait till it's up
-		$i = 10000;
+		$i = 2000;
 		while (1) {
-			if (zc\Common::http_client($srv)[0] == 200)
+			if (zc\Common::http_client($srv)[0] > 0)
 				return $pid;
-			sleep(.1);
-			$i--;
-			if ($i <= 0)
+			sleep(.01);
+			if (--$i <= 0)
 				break;
 		}
 
 		# server can't start
 		throw new CoreDevError("Cannot start test server.");
-		return null;
 	}
 
 	/**

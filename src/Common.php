@@ -20,8 +20,8 @@ class Common {
 	 * @return bool|array False on failure, stdout lines otherwise.
 	 */
 	final public static function exec($cmd, $args=[]) {
-		foreach ($args as $k => $v)
-			$args[$k] = escapeshellarg($arg);
+		foreach ($args as $key => $val)
+			$args[$key] = escapeshellarg($val);
 		$cmd = vsprintf($cmd, $args);
 		exec($cmd, $output, $retcode);
 		if ($retcode !== 0)
@@ -101,11 +101,6 @@ class Common {
 		$url_or_kwargs, $method='GET', $headers=[], $get=[], $post=[],
 		$custom_opts=[], $expect_json=false, $is_raw=false
 	) {
-
-		if (!function_exists('curl_setopt'))
-			throw new CommonError(
-				"cURL extension not installed.");
-
 		if (is_array($url_or_kwargs)) {
 			extract(self::extract_kwargs($url_or_kwargs, [
 				'url' => null,
@@ -169,10 +164,10 @@ class Common {
 
 		$body = curl_exec($conn);
 		$info = curl_getinfo($conn);
-		if (in_array($method, ['HEAD', 'OPTIONS'])) {
-			return [$info['http_code'], $body];
-		}
 		curl_close($conn);
+
+		if (in_array($method, ['HEAD', 'OPTIONS']))
+			return [$info['http_code'], $body];
 		if ($expect_json)
 			$body = @json_decode($body, true);
 		return [$info['http_code'], $body];

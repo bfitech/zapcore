@@ -43,8 +43,25 @@ class RouterTest extends TestCase {
 		$this->assertEquals(
 			zc\Common::exec("echo hello")[0], "hello");
 
+		foreach ([
+			'xtest.htm' => 'text/html; charset=utf-8',
+			'xtest.HTML' => 'text/html; charset=utf-8',
+			'xtest.css' => 'text/css',
+			'xtest.json' => 'application/x-json',
+			'xtest.min.js' => 'application/x-javascript',
+			'xtest.dat' => 'application/octet-stream',
+		] as $fbase => $fmime) {
+			if (!is_dir('/tmp'))
+				continue;
+			$fname = "/tmp/zapcore-test-$fbase";
+			file_put_contents($fname, " ");
+			$this->assertEquals(
+				strpos(zc\Common::get_mimetype($fname), $fmime), 0);
+			unlink($fname);
+		}
+
 		$this->assertEquals(
-			zc\Common::get_mimetype(__FILE__), 'text/x-php');
+			strpos(zc\Common::get_mimetype(__FILE__), 'text/x-php'), 0);
 
 		$this->assertEquals(
 			zc\Common::http_client(self::$server_addr, 'HEAD')[0], 200);
