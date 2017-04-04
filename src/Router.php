@@ -50,18 +50,6 @@ class Router extends Header {
 	}
 
 	/**
-	 * Generic method 'overloading' caller.
-	 *
-	 * Without this, methods added to instance can't be called.
-	 */
-	final public function __call($method, $args) {
-		if (method_exists($this, $method)) {
-			$fn = $this->$method;
-			return call_user_func_array($fn, $args);
-		}
-	}
-
-	/**
 	 * Request parser.
 	 */
 	private function _request_parse() {
@@ -391,8 +379,7 @@ EOD;
 	/**
 	 * Abort.
 	 *
-	 * Use $this->abort_custom() to customize, either in a
-	 * subclass or patched instance.
+	 * Use $this->abort_custom() to customize in a subclass.
 	 *
 	 * @param int $code HTTP error code.
 	 */
@@ -444,8 +431,7 @@ EOD;
 	/**
 	 * Redirect.
 	 *
-	 * Use $this->redirect_custom() to customize, either in a
-	 * subclass or patched instance.
+	 * Use $this->redirect_custom() to customize in a subclass.
 	 *
 	 * @param string $destination Destination URL.
 	 */
@@ -475,24 +461,11 @@ EOD;
 	/**
 	 * Static file.
 	 *
-	 * Use $this->static_file_custom() to customize, either in a
-	 * subclass or patched instance.
+	 * Use $this->static_file_custom() to customize in a subclass.
 	 *
 	 * @param string $path Absolute path to file.
 	 * @param bool|string $disposition Set content-disposition in header.
 	 *     See $this->send_header().
-	 *
-	 * @code
-	 * $app = new Route();
-	 * $custom = function($path, $disp=false) using($app) {
-	 *     $app->abort(503);
-	 * };
-	 * # this doesn't work
-	 * // $app->static_file = $custom;
-	 * # this does
-	 * $app->static_file_custom = $custom;
-	 * $app->route('/static/<path>/currently/unavailable');
-	 * @endcode
 	 */
 	final public function static_file($path, $disposition=false) {
 		if (!method_exists($this, 'static_file_custom'))
