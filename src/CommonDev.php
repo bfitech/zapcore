@@ -70,11 +70,11 @@ class CoreDev {
 		$pid = $out[0];
 
 		# wait till it's up
-		$i = 2000;
+		$i = 400;
 		while (1) {
 			if (zc\Common::http_client($srv)[0] > 0)
 				return $pid;
-			sleep(.01);
+			sleep(0.1);
 			if (--$i <= 0)
 				break;
 		}
