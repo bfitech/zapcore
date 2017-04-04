@@ -6,7 +6,7 @@ use BFITech\ZapCore as zc;
 use BFITech\ZapCoreDev as zd;
 
 
-class RouterTest extends TestCase {
+class CoreTest extends TestCase {
 
 	public static $server_pid;
 	public static $server_addr = 'http://127.0.0.1:9999';

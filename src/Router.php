@@ -181,6 +181,10 @@ class Router extends Header {
 		return [$pattern, $keys];
 	}
 
+	protected function halt() {
+		die();
+	}
+
 	/**
 	 * Callback wrapper.
 	 *
@@ -191,7 +195,7 @@ class Router extends Header {
 		self::$logger->info(sprintf("Router: %s '%s'.",
 			$this->current_method, $this->request_path));
 		$callback($args);
-		die();
+		$this->halt();
 	}
 
 	/**
@@ -217,15 +221,9 @@ class Router extends Header {
 
 		// verify callback
 
-		if (is_string($callback)) {
-			if (!function_exists($callback)) {
-				self::$logger->error(sprintf(
-					"Router: callback invalid in '%s'.", $path));
-				return;
-			}
-		} elseif (!is_object($callback)) {
-			self::$logger->error(sprintf(
-				"Router: callback invalid in '%s'.", $path));
+		if (!is_callable($callback)) {
+			self::$logger->error(
+				"Router: callback invalid in '$path'.");
 			return;
 		}
 
@@ -373,13 +371,15 @@ EOD;
 		$uri = $_SERVER['REQUEST_URI'];
 		printf($html, $code, $msg, $code, $msg, $uri, $uri);
 
-		die();
+		$this->halt();
 	}
 
 	/**
 	 * Abort.
 	 *
-	 * Use $this->abort_custom() to customize in a subclass.
+	 * Use $this->abort_custom() to customize in a subclass. Too
+	 * many unguarded bells and whistles if we are to directly
+	 * override this.
 	 *
 	 * @param int $code HTTP error code.
 	 */
@@ -392,7 +392,7 @@ EOD;
 			$this->abort_default($code);
 		else
 			$this->abort_custom($code);
-		die();
+		$this->halt();
 	}
 
 	/**
@@ -425,7 +425,7 @@ EOD;
 EOD;
 		printf($html, $code, $msg, $code, $msg,
 			$destination, $destination);
-		die();
+		$this->halt();
 	}
 
 	/**
@@ -444,7 +444,7 @@ EOD;
 			$this->redirect_default($destination);
 		else
 			$this->redirect_custom($destination);
-		die();
+		$this->halt();
 	}
 
 	/**
@@ -467,12 +467,11 @@ EOD;
 	 * @param bool|string $disposition Set content-disposition in header.
 	 *     See $this->send_header().
 	 */
-	final public function static_file($path, $disposition=false) {
+	final public function static_file($path, $cache=0, $disposition=false) {
+		self::$logger->info("Router: static: '$path'.");
 		if (!method_exists($this, 'static_file_custom'))
-			return $this->static_file_default($path, $disposition);
-		self::$logger->info(sprintf("Router: static: '%s'.",
-			$path));
-		return $this->static_file_custom($path, $disposition);
+			return $this->static_file_default($path, $cache, $disposition);
+		return $this->static_file_custom($path, $cache, $disposition);
 	}
 
 	/**
