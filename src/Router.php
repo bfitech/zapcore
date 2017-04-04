@@ -273,9 +273,9 @@ class Router extends Header {
 			$path = rtrim($path, '/');
 
 		# init variables
-		$arg = [];
-		$arg['method'] = $request_method;
-		$arg['params'] = [];
+		$args = [];
+		$args['method'] = $request_method;
+		$args['params'] = [];
 
 		if ($path != $this->request_path) {
 			$parser = $this->path_parser($path);
@@ -288,7 +288,7 @@ class Router extends Header {
 			if (!$matched)
 				return;
 			unset($result[0][0]);
-			$arg['params'] = array_combine(
+			$args['params'] = array_combine(
 				$parser[1], $result[0]);
 		}
 
@@ -302,13 +302,13 @@ class Router extends Header {
 
 		// initialize HTTP variables
 
-		$arg['get'] = $_GET;
-		$arg['post'] = [];
-		$arg['files'] = [];
-		$arg['put'] = null;
-		$arg['delete'] = null;
-		$arg['patch'] = null;
-		$arg['cookie'] = $_COOKIE;
+		$args['get'] = $_GET;
+		$args['post'] = [];
+		$args['files'] = [];
+		$args['put'] = null;
+		$args['delete'] = null;
+		$args['patch'] = null;
+		$args['cookie'] = $_COOKIE;
 		$args['header'] = [];
 
 		// populate custom headers
@@ -326,19 +326,19 @@ class Router extends Header {
 		if (in_array($request_method, ['HEAD', 'GET', 'OPTIONS'])) {
 			# HEAD, GET, OPTIONS execute immediately
 			$this->request_handled = true;
-			$this->wrap_callback($callback, $arg);
+			$this->wrap_callback($callback, $args);
 			return;
 		}
 		if ($request_method == 'POST') {
 			# POST, FILES
-			$arg['post'] = $is_raw ?
+			$args['post'] = $is_raw ?
 				file_get_contents("php://input") : $_POST;
 			if (isset($_FILES) && !empty($_FILES))
-				$arg['files'] = $_FILES;
+				$args['files'] = $_FILES;
 		} elseif (in_array($request_method, [
 			'PUT', 'DELETE', 'PATCH'
 		])) {
-			$arg[strtolower($request_method)] = file_get_contents(
+			$args[strtolower($request_method)] = file_get_contents(
 				"php://input");
 		} else {
 			# TRACE, CONNECT, etc. In case webserver haven't disabled them.
@@ -351,7 +351,7 @@ class Router extends Header {
 		// execute callback
 
 		$this->request_handled = true;
-		$this->wrap_callback($callback, $arg);
+		$this->wrap_callback($callback, $args);
 	}
 
 	/**
