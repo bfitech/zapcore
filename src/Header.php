@@ -73,13 +73,23 @@ class Header {
 	 * @return array A dict containing code and message if
 	 *     $code is valid, otherwise 404 dict.
 	 */
-	public static function get_header_string($code) {
+	final public static function get_header_string($code) {
 		if (self::$header_string[$code] === null)
 			$code = 404;
 		return [
 			'code' => $code,
 			'msg'  => self::$header_string[$code],
 		];
+	}
+
+	public static function header($val) {
+		header($val);
+	}
+
+	public static function header_halt($str=null) {
+		if ($str)
+			die((string)$str);
+		die();
 	}
 
 	/**
@@ -96,7 +106,7 @@ class Header {
 	 *     directive for Apache or the equivalent for other webservers.
 	 *     May be set externally with webserver internal directive.
 	 */
-	public static function send_header(
+	final public static function send_header(
 		$fname=false, $cache=false, $echo=true,
 		$code=200, $disposition=false, $xsendfile_header=null
 	) {
@@ -106,20 +116,25 @@ class Header {
 
 		extract(self::get_header_string($code));
 
-		header("HTTP/1.1 $code $msg");
+		static::header("HTTP/1.1 $code $msg");
 		if ($cache) {
 			$cache = intval($cache);
 			$expire = time() + $cache;
-			header("Expires: " . gmdate("D, d M Y H:i:s", $expire)." GMT");
-			header("Cache-Control: must-revalidate");
+			static::header(
+				"Expires: " . gmdate("D, d M Y H:i:s", $expire)." GMT");
+			static::header(
+				"Cache-Control: must-revalidate");
 		} else {
-			header("Expires: Mon, 27 Jul 1996 07:00:00 GMT");
-			header("Cache-Control: no-store, no-cache, must-revalidate");
-			header("Cache-Control: post-check=0, pre-check=0", false);
-			header("Pragma: no-cache");
+			static::header(
+				"Expires: Mon, 27 Jul 1996 07:00:00 GMT");
+			static::header(
+				"Cache-Control: no-store, no-cache, must-revalidate");
+			static::header(
+				"Cache-Control: post-check=0, pre-check=0", false);
+			static::header("Pragma: no-cache");
 		}
-		header("Last-Modified: " . gmdate("D, d M Y H:i:s")." GMT");
-		header("X-Powered-By: Zap!");
+		static::header("Last-Modified: " . gmdate("D, d M Y H:i:s")." GMT");
+		static::header("X-Powered-By: Zap!");
 
 		if (!$echo)
 			return;
@@ -128,30 +143,32 @@ class Header {
 			# Cannot echo anything if fname doesn't exist.
 			return;
 
-		if ($code != 200)
+		if ($code != 200) {
 			# Echoing error page, i.e. serving non-text as error page
 			# makes little sense. Error pages must always be generated
 			# and not cached.
-			die();
+			static::header_halt();
+			return;
+		}
 
-		@header('Content-Length: ' . filesize($fname));
+		static::header('Content-Length: ' . filesize($fname));
 
 		$mime = Common::get_mimetype($fname);
-		@header("Content-Type: $mime");
+		static::header("Content-Type: $mime");
 
 		if ($disposition) {
 			if ($disposition === true)
 				$disposition = basename($fname);
-			@header(sprintf(
+			static::header(sprintf(
 				'Content-Disposition: attachment; filename="%s"',
 				$disposition));
 		}
 
 		if ($xsendfile_header !== null)
-			@header($xsendfile_header);
+			static::header($xsendfile_header);
 		else
 			readfile($fname);
-		die();
+		static::header_halt();
 	}
 
 	/**
@@ -162,14 +179,14 @@ class Header {
 	 * @param int $http_code Valid HTTP response code.
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 */
-	public static function print_json(
+	final public static function print_json(
 		$errno=0, $data=[], $http_code=200, $cache=0
 	) {
 		self::send_header(0, $cache, false, $http_code);
 		$js = json_encode(compact('errno', 'data'));
-		@header("Content-Length: " . strlen($js));
-		@header('Content-Type: application/json');
-		die($js);
+		static::header("Content-Length: " . strlen($js));
+		static::header('Content-Type: application/json');
+		static::header_halt($js);
 	}
 
 	/**
@@ -181,7 +198,7 @@ class Header {
 	 *     this parameter, e.g. 403.
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 */
-	public static function pj(
+	final public static function pj(
 		$retval, $forbidden_code=null, $cache=0
 	) {
 		if (count($retval) < 2)
