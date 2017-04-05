@@ -6,20 +6,13 @@ use BFITech\ZapCore\Logger;
 use BFITech\ZapCore\Router;
 
 
-class RouterPatched extends Router {
+// Router with simplified constructor and disabled die()
+// wrapper is all we need.
+class RouterAlive extends Router {
 
-	public static $test;
-
-	public static $abort_code = null;
-	public static $url_redirect = null;
-	public static $static_path = null;
-
-	public function __construct(
-		$home=null, $host=null, $shutdown=false,
-		Logger $logger=null, TestCase $test=null
-	) {
-		self::$test = $test;
-		parent::__construct($home, $host, $shutdown, $logger);
+	public function __construct() {
+		$logger = new Logger(Logger::ERROR, '/dev/null');
+		parent::__construct(null, null, false, $logger);
 	}
 
 	protected function halt() {
@@ -27,27 +20,22 @@ class RouterPatched extends Router {
 		return;
 	}
 
-	public function abort_custom($code) {
-		// custom abort; no header ever sent
-		self::$test->assertEquals(self::$abort_code, $code);
-	}
-
 }
 
-class RouterPatchedCustom extends RouterPatched {
-
-	public function redirect_custom($url) {
-		// custom redirect; no header ever sent
-		self::$test->assertEquals(self::$url_redirect, $url);
+class RouterCustom extends RouterAlive {
+	public function abort_custom($code) {
+		echo "ERROR: $code";
 	}
-
+	public function redirect_custom($url) {
+		echo "Location: $url";
+	}
 	public function static_file_custom(
 		$path, $cache=0, $disposition=false
 	) {
-		// custom static file serving; no header ever sent
-		self::$test->assertEquals(self::$static_path, $path);
+		echo file_exists($path) ? "OK" : "NO";
 	}
 }
+
 
 class RouterTest extends TestCase {
 
@@ -164,11 +152,7 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$_SERVER['HTTP_REFERER'] = 'http://localhost';
 
-		$cb = function($callback, $args=[]) {
-			$callback($args);
-		};
-
-		$core = new RouterPatched(null, null, false, self::$logger);
+		$core = new RouterAlive();
 		$this->assertEquals($core->get_request_path(), '/test/z');
 
 		# invalid callback
@@ -195,13 +179,11 @@ class RouterTest extends TestCase {
 
 	public function test_route_get() {
 		# mock input; this fake REQUEST_URI can't populate QUERY_STRING
-		$_SERVER['REQUEST_URI'] = '/getme/';
 		$_GET['x'] = 'y';
+		$_SERVER['REQUEST_URI'] = '/getme/';
 		$_SERVER['HTTP_REFERER'] = 'http://localhost';
 
-		$core = new RouterPatched(null, null, false, self::$logger);
-		$this->assertEquals($core->get_request_path(), '/getme');
-
+		$core = new RouterAlive();
 		$core->route('/getme', function($args) use($core){
 			$this->assertEquals($args['get'], ['x' => 'y']);
 			$this->assertEquals($core->get_request_path(), '/getme');
@@ -213,92 +195,131 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/patchme/';
 		$_SERVER['REQUEST_METHOD'] = 'PATCH';
 
-		$core = new RouterPatched(
-			null, null, false, self::$logger);
+		$core = new RouterAlive();
 		$this->assertEquals($core->get_request_path(), '/patchme');
-
 		$core->route('/patchme', function($args) use($core){
 			# we can't fake PATCH with globals here
 			$this->assertEquals($core->get_request_path(), '/patchme');
 		}, ['PATCH']);
 	}
 
+	/**
+	 * @runInSeparateProcess
+	 */
 	public function test_route_trace() {
 		# mock input
 		$_SERVER['REQUEST_URI'] = '/traceme/';
 		$_SERVER['REQUEST_METHOD'] = 'TRACE';
 
-		$core = new RouterPatched(
-			null, null, false, self::$logger, $this);
-		$this->assertEquals($core->get_request_path(), '/traceme');
-
-		# test via $core::$abort_code
-		$core::$abort_code = 405;
-		$core->route('/traceme', function($args) use($core){
-		}, ['TRACE']);
+		$core = new RouterAlive();
+		ob_start();
+		$core->route('/traceme', function($args){}, 'TRACE');
+		$rv = ob_get_clean();
+		# regardless the request, TRACE will always gives 405
+		$this->assertNotEquals(strpos($rv, '405'), false);
 	}
 
+	/**
+	 * @runInSeparateProcess
+	 */
 	public function test_route_notfound() {
 		# mock input
 		$_SERVER['REQUEST_URI'] = '/findme/';
 
-		$core = new RouterPatched(null, null, false, self::$logger, $this);
-
-		# test via $core::$abort_code
-		$core::$abort_code = 404;
-		# even without this top-level route, $core->shutdown() will still
-		# end up with 404
+		# patched router
+		$core = new RouterAlive();
+		ob_start();
+		# without this top-level route, $core->shutdown()
+		# will end up with 501
 		$core->route('/', function($args){});
+		# must invoke shutdown manually since no path matches
+		$core->shutdown();
+		$rv = ob_get_clean();
+		$this->assertNotEquals(strpos($rv, '404'), false);
 	}
 
-	public function test_route_redirect() {
-		# mock input
-		$_SERVER['REQUEST_URI'] = '/redirect/';
-
-		$core = new RouterPatchedCustom(
-			null, null, false, self::$logger, $this);
-
-		$core::$url_redirect = 'http://localhost/x';
-		$core->route('/redirect', function($args) use($core){
-			$core->redirect('http://localhost/x');
-		});
-	}
-
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
 	public function test_route_static() {
 		# mock input
-		$_SERVER['REQUEST_URI'] = '/static/zapcore-static.log';
+		$_SERVER['REQUEST_URI'] = '/static/' . basename(__FILE__);
 
-		$core = new RouterPatchedCustom(
-			null, null, false, self::$logger, $this);
-
-		$core::$static_path = __DIR__ . '/zapcore-static.log';
+		$core = new RouterAlive();
 		$core->route('/static/<path>', function($args) use($core){
+			# broken phpunit
+			# @see https://archive.fo/D761q
+			// ob_start();
+			// $core->static_file(__DIR__ . '/' . $args['params']['path']);
+			// $rv = ob_get_clean();
+			// $this->assertNotEquals(
+			// 	strpos($rv, file_get_contents(__FILE__)), false);
+		});
+
+		$core = new RouterCustom();
+		$core->route('/static/<path>', function($args) use($core){
+			ob_start();
 			$core->static_file(__DIR__ . '/' . $args['params']['path']);
+			$rv = ob_get_clean();
+			$this->assertEquals($rv, 'OK');
 		});
 	}
 
-	public function test_route_shutdown() {
+	/**
+	 * @runInSeparateProcess
+	 */
+	public function test_route_abort() {
 		# mock input
-		$_SERVER['REQUEST_URI'] = '/whatever';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_SERVER['REQUEST_URI'] = '/notfound';
 
-		$core = new RouterPatched(
-			null, null, false, self::$logger, $this);
-		$core->route('/', function($args){
+		$core = new RouterAlive();
+		$core->route('/notfound', function($args) use($core) {
+			ob_start();
+			$core->abort(404);
+			$rv = ob_get_clean();
+			# default 404 page contains string '404'
+			$this->assertNotEquals(
+				strpos($rv, '404'), false);
 		}, 'GET');
-		# because GET has been once registered, abort is 404
-		$core::$abort_code = 404;
-		$core->shutdown();
 
-		$core = new RouterPatched(
-			null, null, true, self::$logger, $this);
-		# @note
-		# - If router is set to execute shutdown function, we'll have
-		#   deeply-layered test here. $core will execute shutdown
-		#   function because there's no matching path, and in turn,
-		#   the shutdown function is a patched abort. Changing
-		#   $core::$abort_code below will fail the test.
-		$core::$abort_code = 501;
+		$core = new RouterCustom();
+		$core->route('/notfound', function($args) use($core) {
+			ob_start();
+			$core->abort(404);
+			$rv = ob_get_clean();
+			# default 404 page contains string '404'
+			$this->assertNotEquals(
+				strpos($rv, '404'), false);
+		}, 'GET');
 	}
+
+	/**
+	 * @runInSeparateProcess
+	 */
+	public function test_route_redirect() {
+		# mock input
+		$_SERVER['REQUEST_URI'] = '/redirect';
+
+		$core = new RouterAlive();
+		$core->route('/redirect', function($args) use($core) {
+			ob_start();
+			$core->redirect('/destination');
+			$rv = ob_get_clean();
+			# default redirect page contains string '301'
+			$this->assertNotEquals(
+				strpos($rv, '301'), false);
+		}, 'GET');
+
+		$core = new RouterCustom();
+		$core->route('/redirect', function($args) use($core) {
+			ob_start();
+			$core->redirect('/destination');
+			$rv = ob_get_clean();
+			$this->assertNotEquals(
+				strpos($rv, '/destination'), false);
+		}, 'GET');
+	}
+
 }
 
