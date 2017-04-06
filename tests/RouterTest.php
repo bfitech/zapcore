@@ -148,8 +148,8 @@ class RouterTest extends TestCase {
 	public function test_route_post() {
 		# mock input
 		$_POST['x'] = 'y';
-		$_SERVER['REQUEST_URI'] = '/test/z';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI'] = '/test/z';
 		$_SERVER['HTTP_REFERER'] = 'http://localhost';
 
 		$core = new RouterAlive();
@@ -180,6 +180,7 @@ class RouterTest extends TestCase {
 	public function test_route_get() {
 		# mock input; this fake REQUEST_URI can't populate QUERY_STRING
 		$_GET['x'] = 'y';
+		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['REQUEST_URI'] = '/getme/';
 		$_SERVER['HTTP_REFERER'] = 'http://localhost';
 
@@ -192,8 +193,8 @@ class RouterTest extends TestCase {
 
 	public function test_route_patch() {
 		# mock input
-		$_SERVER['REQUEST_URI'] = '/patchme/';
 		$_SERVER['REQUEST_METHOD'] = 'PATCH';
+		$_SERVER['REQUEST_URI'] = '/patchme/';
 
 		$core = new RouterAlive();
 		$this->assertEquals($core->get_request_path(), '/patchme');
@@ -208,8 +209,8 @@ class RouterTest extends TestCase {
 	 */
 	public function test_route_trace() {
 		# mock input
-		$_SERVER['REQUEST_URI'] = '/traceme/';
 		$_SERVER['REQUEST_METHOD'] = 'TRACE';
+		$_SERVER['REQUEST_URI'] = '/traceme/';
 
 		$core = new RouterAlive();
 		ob_start();
@@ -224,6 +225,7 @@ class RouterTest extends TestCase {
 	 */
 	public function test_route_notfound() {
 		# mock input
+		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['REQUEST_URI'] = '/findme/';
 
 		# patched router
@@ -244,6 +246,7 @@ class RouterTest extends TestCase {
 	 */
 	public function test_route_static() {
 		# mock input
+		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['REQUEST_URI'] = '/static/' . basename(__FILE__);
 
 		$core = new RouterAlive();
@@ -272,6 +275,7 @@ class RouterTest extends TestCase {
 	public function test_route_abort() {
 		# mock input
 		$_SERVER['REQUEST_URI'] = '/notfound';
+		$_SERVER['REQUEST_METHOD'] = 'GET';
 
 		$core = new RouterAlive();
 		$core->route('/notfound', function($args) use($core) {
@@ -300,6 +304,7 @@ class RouterTest extends TestCase {
 	public function test_route_redirect() {
 		# mock input
 		$_SERVER['REQUEST_URI'] = '/redirect';
+		$_SERVER['REQUEST_METHOD'] = 'GET';
 
 		$core = new RouterAlive();
 		$core->route('/redirect', function($args) use($core) {

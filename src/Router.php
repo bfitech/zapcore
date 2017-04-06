@@ -229,8 +229,10 @@ class Router extends Header {
 
 		// verify request method
 
-		$request_method = isset($_SERVER['REQUEST_METHOD'])
-			? $_SERVER['REQUEST_METHOD'] : 'GET';
+		$request_method = (
+			isset($_SERVER['REQUEST_METHOD']) &&
+			!empty($_SERVER['REQUEST_METHOD'])
+		) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
 		$this->current_method = $request_method;
 
 		# always allow HEAD
