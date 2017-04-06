@@ -13,4 +13,4 @@ script:
     - php ./vendor/bin/phpunit -c phpunit.xml
 
 after_success:
-    - bash < (curl -s https://codecov.io/bash)
+    - curl -s https://codecov.io/bash | bash
