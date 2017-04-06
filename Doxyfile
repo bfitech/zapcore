@@ -5,8 +5,8 @@
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "ZapCore"
-PROJECT_NUMBER         = "1.0.0"
-PROJECT_BRIEF          = "A Simple PHP Router."
+PROJECT_NUMBER         = "1.2"
+PROJECT_BRIEF          = "A Simple PHP Router and Other Utils."
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = ./docs
 CREATE_SUBDIRS         = YES
