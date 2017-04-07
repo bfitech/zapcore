@@ -5,7 +5,8 @@ require(__DIR__ . './../vendor/autoload.php');
 
 use BFITech\ZapCore as zc;
 
-$logger = new zc\Logger(zc\Logger::DEBUG, __DIR__ . '/zapcore.log');
+$logger = new zc\Logger(zc\Logger::DEBUG,
+	__DIR__ . '/zapcore-test.log');
 $core = new zc\Router(null, null, true, $logger);
 
 $core->route('/', function($args) use($core) {

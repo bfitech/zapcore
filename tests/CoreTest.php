@@ -13,9 +13,9 @@ class CoreTest extends TestCase {
 	public static $logfile = null;
 
 	public static function setUpBeforeClass() {
-		self::$logfile = __DIR__ . '/zapcore.log';
+		self::$logfile = __DIR__ . '/zapcore-test.log';
 		if (file_exists(self::$logfile))
-			@unlink(self::$logfile);
+			unlink(self::$logfile);
 		self::$server_pid = zd\CoreDev::server_up(__DIR__);
 		if (!self::$server_pid)
 			die();
