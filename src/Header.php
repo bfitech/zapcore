@@ -82,19 +82,132 @@ class Header {
 		];
 	}
 
-	public static function header($val) {
-		header($val);
+	/**
+	 * Wrapper for header().
+	 *
+	 * This can be patched non-web context, e.g. for testing.
+	 *
+	 * @param string $header_string Header string.
+	 * @param bool $replace Replace option for standar header()
+	 *     function.
+	 */
+	public static function header($header_string, $replace=false) {
+		header($header_string, $replace);
 	}
 
+	/**
+	 * Wrapper for die().
+	 *
+	 * This can be patched non-web context, e.g. for testing.
+	 *
+	 * @param string|null $str String to print on halt.
+	 */
 	public static function header_halt($str=null) {
 		if ($str)
-			die((string)$str);
+			echo $str;
 		die();
+	}
+
+	/**
+	 * Start sending response headers.
+	 *
+	 * @param int $code HTTP code.
+	 * @param int $cache Cache age, 0 for no cache.
+	 * @param array $headers Additional headers.
+	 */
+	public static function start_header(
+		$code=200, $cache=0, $headers=[]
+	) {
+		extract(self::get_header_string($code));
+
+		static::header("HTTP/1.1 $code $msg");
+		if ($cache) {
+			$cache = intval($cache);
+			$expire = time() + $cache;
+			static::header("Expires: " .
+				gmdate("D, d M Y H:i:s", $expire)." GMT");
+			static::header("Cache-Control: must-revalidate");
+		} else {
+			static::header(
+				"Expires: Mon, 27 Jul 1996 07:00:00 GMT");
+			static::header(
+				"Cache-Control: no-store, no-cache, must-revalidate");
+			static::header(
+				"Cache-Control: post-check=0, pre-check=0", false);
+			static::header("Pragma: no-cache");
+		}
+		static::header("Last-Modified: " .
+			gmdate("D, d M Y H:i:s")." GMT");
+		static::header("X-Powered-By: Zap!");
+
+		if (!$headers)
+			return;
+		foreach ($headers as $header)
+			static::header($header);
+	}
+
+	/**
+	 * Send file.
+	 *
+	 * @param string $fpath Path to file.
+	 * @param mixed $disposition If set as string, this will be used
+	 *     as filename on content disposition. If set to true, content
+	 *     disposition is inferred from basename. Otherwise, no
+	 *     content disposition header is sent.
+	 * @param int $code HTTP code. Typically it's 200, but this can
+	 *     be anything since we can serve, e.g. 404 with a text file.
+	 * @param int $cache Cache age, 0 for no cache.
+	 * @param array $headers Additional headers.
+	 * @param string $sendfile_header If not null, this will be used
+	 *     and sending file is left to the web server.
+	 * @param callable $callback_notfound What to do when the file
+	 *     is not found. If no callback is provided, the method will
+	 *     just immediately halt.
+	 */
+	public static function send_file(
+		$fpath, $disposition=null, $code=200, $cache=0,
+		$headers=[], $sendfile_header=null,
+		$callback_notfound=null
+	) {
+
+		if (!file_exists($fpath) || is_dir($fpath)) {
+			static::start_header(404, 0, $headers);
+			if (is_callable($callback_notfound)) {
+				$callback_notfound();
+				static::header_halt();
+			}
+			return;
+		}
+
+		static::start_header($code, $cache, $headers);
+
+		static::header('Content-Length: ' .
+			filesize($fpath));
+		static::header("Content-Type: " .
+			Common::get_mimetype($fpath));
+
+		if ($disposition) {
+			if ($disposition === true)
+				$disposition = htmlspecialchars(
+					basename($fpath), ENT_QUOTES);
+			static::header(sprintf(
+				'Content-Disposition: attachment; filename="%s"',
+				$disposition));
+		}
+
+		if ($sendfile_header)
+			static::header($sendfile_header);
+		else
+			readfile($fpath);
+
+		static::header_halt();
 	}
 
 	/**
 	 * Send response headers and read a file if applicable.
 	 *
+	 * @deprecated Use $this->start_header() and $this->send_file()
+	 *     instead.
 	 * @param string|false $fname Filename to read or false.
 	 * @param int|false $cache Cache age or no cache at all.
 	 * @param bool $echo If true and $fname exists, print it and die.
@@ -111,64 +224,12 @@ class Header {
 		$code=200, $disposition=false, $xsendfile_header=null
 	) {
 
-		if ($fname && (!file_exists($fname) || is_dir($fname)))
-			$code = 404;
-
-		extract(self::get_header_string($code));
-
-		static::header("HTTP/1.1 $code $msg");
-		if ($cache) {
-			$cache = intval($cache);
-			$expire = time() + $cache;
-			static::header(
-				"Expires: " . gmdate("D, d M Y H:i:s", $expire)." GMT");
-			static::header(
-				"Cache-Control: must-revalidate");
-		} else {
-			static::header(
-				"Expires: Mon, 27 Jul 1996 07:00:00 GMT");
-			static::header(
-				"Cache-Control: no-store, no-cache, must-revalidate");
-			static::header(
-				"Cache-Control: post-check=0, pre-check=0", false);
-			static::header("Pragma: no-cache");
-		}
-		static::header("Last-Modified: " . gmdate("D, d M Y H:i:s")." GMT");
-		static::header("X-Powered-By: Zap!");
-
-		if (!$echo)
-			return;
-
-		if (!$fname && $echo)
-			# Cannot echo anything if fname doesn't exist.
-			return;
-
-		if ($code != 200) {
-			# Echoing error page, i.e. serving non-text as error page
-			# makes little sense. Error pages must always be generated
-			# and not cached.
+		if ($fname)
+			return static::send_file($fname, $disposition,
+				$code, $cache, [], $xsendfile_header);
+		static::start_header($code, $cache);
+		if ($echo)
 			static::header_halt();
-			return;
-		}
-
-		static::header('Content-Length: ' . filesize($fname));
-
-		$mime = Common::get_mimetype($fname);
-		static::header("Content-Type: $mime");
-
-		if ($disposition) {
-			if ($disposition === true)
-				$disposition = basename($fname);
-			static::header(sprintf(
-				'Content-Disposition: attachment; filename="%s"',
-				$disposition));
-		}
-
-		if ($xsendfile_header !== null)
-			static::header($xsendfile_header);
-		else
-			readfile($fname);
-		static::header_halt();
 	}
 
 	/**
