@@ -9,17 +9,18 @@ use BFITech\ZapCore\Router;
 // Router with simplified constructor and disabled die()
 // wrapper is all we need.
 class RouterAlive extends Router {
-
 	public function __construct() {
-		$logger = new Logger(Logger::ERROR, '/dev/null');
+		$logfile = getcwd() . '/zapcore-test-mock-router.log';
+		$logger = new Logger(Logger::ERROR, $logfile);
 		parent::__construct(null, null, false, $logger);
 	}
-
-	protected function halt() {
+	public static function header($header_string, $replace=false) {
+		echo "$header_string\n";
+	}
+	public static function header_halt($str=null) {
 		// don't die
 		return;
 	}
-
 }
 
 class RouterCustom extends RouterAlive {
@@ -42,14 +43,23 @@ class RouterTest extends TestCase {
 	public static $logger;
 
 	public static function setUpBeforeClass() {
-		self::$logger = new Logger(Logger::DEBUG, '/dev/null');
+		$logfile = getcwd() . 'zapcore-test.log';
+		self::$logger = new Logger(Logger::DEBUG, $logfile);
 	}
 
 	public static function tearDownAfterClass() {
+		foreach([
+			'/zapcore-test.log',
+			'/zapcore-test-mock-router.log'
+		] as $logbase) {
+			$logfile = getcwd() . $logbase;
+			if (file_exists($logfile))
+				unlink($logfile);
+		}
 	}
 
 	public function test_logger() {
-		$logfile = __DIR__ . '/zapcore-logger.log';
+		$logfile = getcwd() . '/zapcore-logger-test.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		$logger = new Logger(Logger::INFO, $logfile);
@@ -69,32 +79,36 @@ class RouterTest extends TestCase {
 		$this->assertEquals(
 			strpos(file_get_contents($logfile), 'DEB'), false);
 
-		# write to /dev/null instead of logfile
+		# file handle argument overrides file path
+		$logfile_02 = $logfile . '.log';
 		$logger = new Logger(Logger::DEBUG, $logfile,
-			fopen('/dev/null', 'ab'));
+			fopen($logfile_02, 'ab'));
 		$logger->debug("Some debug.");
 		$this->assertEquals(
 			strpos(file_get_contents($logfile), 'DEB'), false);
 
-		# write to STDERR since logfile becomes read-only
+		# automatically write to STDERR if file is read-only
 		chmod($logfile, 0400);
 		$logger = new Logger(Logger::DEBUG, $logfile);
-		// $logger->info("Some info.");
+		# to not clutter terminal, use 2>/dev/null
+		$logger->info("Auto-redirect logging to STDERR.");
+		$this->assertEquals(
+			strpos(file_get_contents($logfile), 'STDERR'), false);
 
 		# if chmod-ing happens after opening handle, handle is
 		# still writable
-		$logfilefile = $logfile . '.log';
-		if (file_exists($logfilefile))
-			unlink($logfilefile);
-		file_put_contents($logfilefile, "START\n");
-		$logger = new Logger(Logger::DEBUG, $logfilefile);
-		chmod($logfilefile, 0400);
+		$logfile_03 = $logfile_02 . '.log';
+		if (file_exists($logfile_03))
+			unlink($logfile_03);
+		file_put_contents($logfile_03, "START\n");
+		$logger = new Logger(Logger::DEBUG, $logfile_03);
+		chmod($logfile_03, 0400);
 		$logger->info("Some info.");
-		$content = file_get_contents($logfilefile);
+		$content = file_get_contents($logfile_03);
 		$this->assertEquals(substr($content, 0, 5), "START");
 		$this->assertNotEquals(strpos($content, "INF"), false);
 
-		foreach ([$logfile, $logfilefile] as $fl)
+		foreach ([$logfile, $logfile_02, $logfile_03] as $fl)
 			unlink($fl);
 	}
 
@@ -204,9 +218,6 @@ class RouterTest extends TestCase {
 		}, ['PATCH']);
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 */
 	public function test_route_trace() {
 		# mock input
 		$_SERVER['REQUEST_METHOD'] = 'TRACE';
@@ -220,9 +231,6 @@ class RouterTest extends TestCase {
 		$this->assertNotEquals(strpos($rv, '405'), false);
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 */
 	public function test_route_notfound() {
 		# mock input
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -240,10 +248,6 @@ class RouterTest extends TestCase {
 		$this->assertNotEquals(strpos($rv, '404'), false);
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 * @preserveGlobalState disabled
-	 */
 	public function test_route_static() {
 		# mock input
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -251,13 +255,11 @@ class RouterTest extends TestCase {
 
 		$core = new RouterAlive();
 		$core->route('/static/<path>', function($args) use($core){
-			# broken phpunit
-			# @see https://archive.fo/D761q
-			// ob_start();
-			// $core->static_file(__DIR__ . '/' . $args['params']['path']);
-			// $rv = ob_get_clean();
-			// $this->assertNotEquals(
-			// 	strpos($rv, file_get_contents(__FILE__)), false);
+			ob_start();
+			$core->static_file(__DIR__ . '/' . $args['params']['path']);
+			$rv = ob_get_clean();
+			$this->assertNotEquals(
+				strpos($rv, file_get_contents(__FILE__)), false);
 		});
 
 		$core = new RouterCustom();
@@ -269,9 +271,6 @@ class RouterTest extends TestCase {
 		});
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 */
 	public function test_route_abort() {
 		# mock input
 		$_SERVER['REQUEST_URI'] = '/notfound';
@@ -298,9 +297,6 @@ class RouterTest extends TestCase {
 		}, 'GET');
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 */
 	public function test_route_redirect() {
 		# mock input
 		$_SERVER['REQUEST_URI'] = '/redirect';

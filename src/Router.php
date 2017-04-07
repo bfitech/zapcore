@@ -181,8 +181,11 @@ class Router extends Header {
 		return [$pattern, $keys];
 	}
 
+	/**
+	 * Wrap halt.
+	 */
 	protected function halt() {
-		die();
+		static::header_halt();
 	}
 
 	/**
@@ -347,7 +350,7 @@ class Router extends Header {
 	 */
 	private function abort_default($code) {
 		extract(self::get_header_string($code));
-		$this->send_header(0, 0, 0, $code);
+		self::send_header(0, 0, 0, $code);
 		$html = <<<EOD
 <!doctype html>
 <html>
@@ -402,7 +405,7 @@ EOD;
 	 */
 	private function redirect_default($destination) {
 		extract(self::get_header_string(301));
-		$this->send_header(0, 0, 0, $code);
+		self::send_header(0, 0, 0, $code);
 		@header("Location: $destination");
 		$html = <<<EOD
 <!doctype html>
@@ -456,7 +459,7 @@ EOD;
 		$path, $cache=0, $disposition=false
 	) {
 		if (file_exists($path))
-			$this->send_header($path, $cache, 1, 200, $disposition);
+			self::send_header($path, $cache, 1, 200, $disposition);
 		$this->abort(404);
 	}
 
@@ -467,7 +470,7 @@ EOD;
 	 *
 	 * @param string $path Absolute path to file.
 	 * @param bool|string $disposition Set content-disposition in header.
-	 *     See $this->send_header().
+	 *     See self::send_header().
 	 */
 	final public function static_file($path, $cache=0, $disposition=false) {
 		self::$logger->info("Router: static: '$path'.");
