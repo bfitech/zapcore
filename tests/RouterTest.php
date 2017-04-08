@@ -17,7 +17,7 @@ class RouterAlive extends Router {
 	public static function header($header_string, $replace=false) {
 		echo "$header_string\n";
 	}
-	public static function header_halt($str=null) {
+	public static function halt($str=null) {
 		// don't die
 		return;
 	}

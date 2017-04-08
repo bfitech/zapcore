@@ -83,14 +83,6 @@ class HeaderTest extends TestCase {
 			strpos($rv, file_get_contents(__FILE__)), false);
 	}
 
-	/**
-	 * @runInSeparateProcess
-	 */
-	public function test_header_halt() {
-		# @todo broken
-		#Header::header_halt('x');
-	}
-
 	public function test_print_json() {
 		ob_start();
 		HeaderPatched::print_json();

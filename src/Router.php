@@ -182,13 +182,6 @@ class Router extends Header {
 	}
 
 	/**
-	 * Wrap halt.
-	 */
-	protected function halt() {
-		static::header_halt();
-	}
-
-	/**
 	 * Callback wrapper.
 	 *
 	 * Override this for more decorator-like processing. Make sure
@@ -198,7 +191,7 @@ class Router extends Header {
 		self::$logger->info(sprintf("Router: %s '%s'.",
 			$this->current_method, $this->request_path));
 		$callback($args);
-		$this->halt();
+		static::halt();
 	}
 
 	/**
@@ -376,7 +369,7 @@ EOD;
 		$uri = $_SERVER['REQUEST_URI'];
 		printf($html, $code, $msg, $code, $msg, $uri, $uri);
 
-		$this->halt();
+		static::halt();
 	}
 
 	/**
@@ -397,7 +390,7 @@ EOD;
 			$this->abort_default($code);
 		else
 			$this->abort_custom($code);
-		$this->halt();
+		static::halt();
 	}
 
 	/**
@@ -430,7 +423,7 @@ EOD;
 EOD;
 		printf($html, $code, $msg, $code, $msg,
 			$destination, $destination);
-		$this->halt();
+		static::halt();
 	}
 
 	/**
@@ -449,7 +442,7 @@ EOD;
 			$this->redirect_default($destination);
 		else
 			$this->redirect_custom($destination);
-		$this->halt();
+		static::halt();
 	}
 
 	/**
@@ -469,6 +462,7 @@ EOD;
 	 * Use $this->static_file_custom() to customize in a subclass.
 	 *
 	 * @param string $path Absolute path to file.
+	 * @param int $cache Cache age in seconds.
 	 * @param bool|string $disposition Set content-disposition in header.
 	 *     See self::send_header().
 	 */
