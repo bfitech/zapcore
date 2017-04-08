@@ -85,7 +85,7 @@ class Header {
 	/**
 	 * Wrapper for header().
 	 *
-	 * This can be patched non-web context, e.g. for testing.
+	 * This can be patched for non-web context, e.g. for testing.
 	 *
 	 * @param string $header_string Header string.
 	 * @param bool $replace Replace option for standar header()
@@ -102,7 +102,7 @@ class Header {
 	 *
 	 * @param string|null $str String to print on halt.
 	 */
-	public static function header_halt($str=null) {
+	public static function halt($str=null) {
 		if ($str)
 			echo $str;
 		die();
@@ -120,7 +120,9 @@ class Header {
 	) {
 		extract(self::get_header_string($code));
 
-		static::header("HTTP/1.1 $code $msg");
+		$prot = isset($_SERVER['SERVER_PROTOCOL'])
+			? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.1';
+		static::header("$prot $code $msg");
 		if ($cache) {
 			$cache = intval($cache);
 			$expire = time() + $cache;
@@ -128,17 +130,15 @@ class Header {
 				gmdate("D, d M Y H:i:s", $expire)." GMT");
 			static::header("Cache-Control: must-revalidate");
 		} else {
-			static::header(
-				"Expires: Mon, 27 Jul 1996 07:00:00 GMT");
+			static::header("Expires: Mon, 27 Jul 1996 07:00:00 GMT");
 			static::header(
 				"Cache-Control: no-store, no-cache, must-revalidate");
-			static::header(
-				"Cache-Control: post-check=0, pre-check=0", false);
+			static::header("Cache-Control: post-check=0, pre-check=0");
 			static::header("Pragma: no-cache");
 		}
 		static::header("Last-Modified: " .
 			gmdate("D, d M Y H:i:s")." GMT");
-		static::header("X-Powered-By: Zap!");
+		static::header("X-Powered-By: Zap!", true);
 
 		if (!$headers)
 			return;
@@ -174,7 +174,7 @@ class Header {
 			static::start_header(404, 0, $headers);
 			if (is_callable($callback_notfound)) {
 				$callback_notfound();
-				static::header_halt();
+				static::halt();
 			}
 			return;
 		}
@@ -200,7 +200,7 @@ class Header {
 		else
 			readfile($fpath);
 
-		static::header_halt();
+		static::halt();
 	}
 
 	/**
@@ -229,7 +229,7 @@ class Header {
 				$code, $cache, [], $xsendfile_header);
 		static::start_header($code, $cache);
 		if ($echo)
-			static::header_halt();
+			static::halt();
 	}
 
 	/**
@@ -247,7 +247,7 @@ class Header {
 		$js = json_encode(compact('errno', 'data'));
 		static::header("Content-Length: " . strlen($js));
 		static::header('Content-Type: application/json');
-		static::header_halt($js);
+		static::halt($js);
 	}
 
 	/**

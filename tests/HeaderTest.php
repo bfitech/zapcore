@@ -9,7 +9,7 @@ class HeaderPatched extends Header {
 	public static function header($header_string, $replace=false) {
 		echo "$header_string\n";
 	}
-	public static function header_halt($str=null) {
+	public static function halt($str=null) {
 		if ($str)
 			echo $str;
 	}
