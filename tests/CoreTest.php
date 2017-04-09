@@ -40,23 +40,38 @@ class CoreTest extends TestCase {
 	}
 
 	public function test_common() {
-		$this->assertEquals(
-			zc\Common::exec("echo hello")[0], "hello");
+		if (file_exists('/bin/bash'))
+			$this->assertEquals(
+				zc\Common::exec("echo hello")[0], "hello");
 
 		foreach ([
-			'xtest.htm' => 'text/html; charset=utf-8',
-			'xtest.HTML' => 'text/html; charset=utf-8',
-			'xtest.css' => 'text/css',
-			'xtest.json' => 'application/x-json',
-			'xtest.min.js' => 'application/x-javascript',
-			'xtest.dat' => 'application/octet-stream',
+			'xtest.htm' => ['text/html; charset=utf-8'],
+			'xtest.HTML' => ['text/html; charset=utf-8'],
+			'xtest.css' => ['text/css'],
+			'xtest.json' => ['application/json'],
+			'xtest.min.js' => ['application/javascript'],
+			'xtest.dat' => [
+				'application/octet-stream',
+				pack('H*', 'FF0AB00B5'),
+			],
 		] as $fbase => $fmime) {
 			if (!is_dir('/tmp'))
 				continue;
 			$fname = "/tmp/zapcore-test-$fbase";
-			file_put_contents($fname, " ");
+			$content = isset($fmime[1]) ? $fmime[1] : " ";
+			file_put_contents($fname, $content);
+			$rmime = zc\Common::get_mimetype($fname);
+			$this->assertSame(strpos($rmime, $fmime[0]), 0);
+			# last $fname is used by the next block
+			if ($fbase != 'xtest.dat')
+				unlink($fname);
+		}
+		if (file_exists($fname)) {
+			# use bogus `file`, in this case, PHP interpreter
+			zc\Common::get_mimetype($fname, PHP_BINARY);
 			$this->assertEquals(
-				strpos(zc\Common::get_mimetype($fname), $fmime), 0);
+				zc\Common::get_mimetype($fname),
+				'application/octet-stream');
 			unlink($fname);
 		}
 

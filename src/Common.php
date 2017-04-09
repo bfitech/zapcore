@@ -30,12 +30,16 @@ class Common {
 	}
 
 	/**
-	 * Find a mime type, fall back to using `file`.
+	 * Find a mime type.
 	 *
 	 * @param string $fname The file name.
+	 * @param string $path_to_file Path to `file`. Useful if
+	 *     you have it outside PATH.
 	 * @return string The MIME type or application/octet-stream.
 	 */
-	final public static function get_mimetype($fname) {
+	final public static function get_mimetype(
+		$fname, $path_to_file=null
+	) {
 
 		$pi = pathinfo($fname);
 		if (isset($pi['extension'])) {
@@ -46,26 +50,32 @@ class Common {
 				case 'css':
 					return 'text/css';
 				case 'js':
-					return 'application/x-javascript';
+					return 'application/javascript';
 				case 'json':
-					return 'application/x-json';
+					return 'application/json';
 				case 'htm':
 				case 'html':
 					# always assume UTF-8
 					return 'text/html; charset=utf-8';
 			}
 		}
+
 		# with builtin
 		if (function_exists('mime_content_type')) {
-			// using mime_content_type() if exists
 			$mime = @mime_content_type($fname);
-			if ($mime)
+			if ($mime && $mime != 'application/octet-stream')
 				return $mime;
 		}
-		# with `file`, assuming it's in PATH
-		$mimes = self::exec("file -bip %s", [$fname]);
-		if ($mimes)
+
+		# with `file`
+		$cmd = '%s -bip %s';
+		$bin = 'file';
+		if ($path_to_file && is_executable($path_to_file))
+			$bin = $path_to_file;
+		$mimes = self::exec($cmd, [$bin, $fname]);
+		if ($mimes && preg_match('!^[a-z0-9\-]/!', $mimes[0]))
 			return $mimes[0];
+
 		# giving up
 		return 'application/octet-stream';
 	}
