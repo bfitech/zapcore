@@ -50,9 +50,13 @@ class CoreTest extends TestCase {
 			'xtest.css' => ['text/css'],
 			'xtest.json' => ['application/json'],
 			'xtest.min.js' => ['application/javascript'],
+			'xtest.pdf' => [
+				'application/pdf',
+				pack('H*', "255044462d312e340a25"),
+			],
 			'xtest.dat' => [
 				'application/octet-stream',
-				pack('H*', 'FF0AB00B5'),
+				pack('H*', "F00F00F00F00F00F00F0")
 			],
 		] as $fbase => $fmime) {
 			if (!is_dir('/tmp'))
