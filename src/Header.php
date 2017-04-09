@@ -85,11 +85,11 @@ class Header {
 	/**
 	 * Wrapper for header().
 	 *
-	 * This can be patched for non-web context, e.g. for testing.
+	 * Override this for non-web context, e.g. for testing.
 	 *
 	 * @param string $header_string Header string.
-	 * @param bool $replace Replace option for standar header()
-	 *     function.
+	 * @param bool $replace The 'replace' option for standard
+	 *     header() function.
 	 */
 	public static function header($header_string, $replace=false) {
 		header($header_string, $replace);
@@ -98,13 +98,21 @@ class Header {
 	/**
 	 * Wrapper for die().
 	 *
-	 * This can be patched non-web context, e.g. for testing.
+	 * Override this for non-web context, e.g. for testing.
 	 *
-	 * @param string|null $str String to print on halt.
+	 * @param mixed $arg What to print on halt. If null, nothing
+	 *     is printed. If it's a numeric or string, it will be
+	 *     immediately printed. For other types, it's completely at
+	 *     the mercy of print_r(): formatted array, true becomes '1',
+	 *     etc. Use with care.
 	 */
-	public static function halt($str=null) {
-		if ($str)
-			echo $str;
+	public static function halt($arg=null) {
+		if ($arg === null)
+			die();
+		if (is_string($arg) || is_numeric($arg))
+			echo $arg;
+		else
+			print_r($arg);
 		die();
 	}
 
