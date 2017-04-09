@@ -117,6 +117,21 @@ class Header {
 	}
 
 	/**
+	 * Wrapper for setcookie().
+	 *
+	 * Override this for non-web context, e.g. for testing.
+	 * Parameters are exactly the same with the wrapped
+	 * function.
+	 */
+	public static function send_cookie(
+		$name, $value='', $expire=0, $path='', $domain='',
+		$secure=false, $httponly=false
+	) {
+		setcookie($name, $value, $expire, $path, $domain,
+			$secure, $httponly);
+	}
+
+	/**
 	 * Start sending response headers.
 	 *
 	 * @param int $code HTTP code.
