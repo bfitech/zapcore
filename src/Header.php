@@ -71,7 +71,7 @@ class Header {
 	 *
 	 * @param int $code HTTP code.
 	 * @return array A dict containing code and message if
-	 *     $code is valid, otherwise 404 dict.
+	 *     `$code` is valid, 404 dict otherwise.
 	 */
 	final public static function get_header_string($code) {
 		if (self::$header_string[$code] === null)
@@ -103,7 +103,7 @@ class Header {
 	 * @param mixed $arg What to print on halt. If null, nothing
 	 *     is printed. If it's a numeric or string, it will be
 	 *     immediately printed. For other types, it's completely at
-	 *     the mercy of print_r(): formatted array, true becomes '1',
+	 *     the mercy of `print_r()`: formatted array, true becomes '1',
 	 *     etc. Use with care.
 	 */
 	public static function halt($arg=null) {
@@ -181,7 +181,7 @@ class Header {
 	 *     be anything since we can serve, e.g. 404 with a text file.
 	 * @param int $cache Cache age, 0 for no cache.
 	 * @param array $headers Additional headers.
-	 * @param string $sendfile_header If not null, this will be used
+	 * @param string $xsendfile_header If not null, this will be used
 	 *     and sending file is left to the web server.
 	 * @param callable $callback_notfound What to do when the file
 	 *     is not found. If no callback is provided, the method will
@@ -189,7 +189,7 @@ class Header {
 	 */
 	public static function send_file(
 		$fpath, $disposition=null, $code=200, $cache=0,
-		$headers=[], $sendfile_header=null,
+		$headers=[], $xsendfile_header=null,
 		$callback_notfound=null
 	) {
 
@@ -218,8 +218,8 @@ class Header {
 				$disposition));
 		}
 
-		if ($sendfile_header)
-			static::header($sendfile_header);
+		if ($xsendfile_header)
+			static::header($xsendfile_header);
 		else
 			readfile($fpath);
 
@@ -229,11 +229,11 @@ class Header {
 	/**
 	 * Send response headers and read a file if applicable.
 	 *
-	 * @deprecated Use $this->start_header() and $this->send_file()
-	 *     instead.
+	 * @deprecated Use start_header() and send_file() instead.
+	 *
 	 * @param string|false $fname Filename to read or false.
 	 * @param int|false $cache Cache age or no cache at all.
-	 * @param bool $echo If true and $fname exists, print it and die.
+	 * @param bool $echo If true and `$fname` exists, print it and die.
 	 * @param int $code HTTP code.
 	 * @param bool|string $disposition Whether Content-Disposition
 	 *     header is to be sent. If a string is set, it will be used
@@ -266,10 +266,11 @@ class Header {
 	final public static function print_json(
 		$errno=0, $data=[], $http_code=200, $cache=0
 	) {
-		self::send_header(0, $cache, false, $http_code);
 		$js = json_encode(compact('errno', 'data'));
-		static::header("Content-Length: " . strlen($js));
-		static::header('Content-Type: application/json');
+		self::start_header($http_code, $cache, [
+			'Content-Length: ' . strlen($js),
+			'Content-Type: application/json',
+		]);
 		static::halt($js);
 	}
 
@@ -277,8 +278,8 @@ class Header {
 	 * Even shorter JSON response formatter.
 	 *
 	 * @param array $retval Return value of typical Zap HTTP response.
-	 * @param int $forbidden_code If $retval[0] == 0, HTTP code is 200.
-	 *     Otherwise it defaults to 401 which we can override with
+	 * @param int $forbidden_code If `$retval[0] == 0`, HTTP code is
+	 *     200. Otherwise it defaults to 401 which we can override with
 	 *     this parameter, e.g. 403.
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 */
