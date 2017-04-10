@@ -185,7 +185,7 @@ class Router extends Header {
 	 * Callback wrapper.
 	 *
 	 * Override this for more decorator-like processing. Make sure
-	 * the override always ends with die().
+	 * the override always ends with halt().
 	 */
 	public function wrap_callback($callback, $args=[]) {
 		self::$logger->info(sprintf("Router: %s '%s'.",
@@ -343,14 +343,17 @@ class Router extends Header {
 	 */
 	private function abort_default($code) {
 		extract(self::get_header_string($code));
-		self::send_header(0, 0, 0, $code);
-		$html = <<<EOD
+		static::start_header($code);
+		$uri = htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES);
+		echo <<<EOD
 <!doctype html>
 <html>
 	<head>
-		<meta charset='utf-8'/>
-		<title>%s %s</title>
-		<style type="text/css">
+		<meta charset=utf-8>
+		<meta name=viewport
+			content="width=device-width, initial-scale=1.0, user-scalable=yes">
+		<title>$code $msg</title>
+		<style>
 			body {background-color: #eee; font-family: sans;}
 			div  {background-color: #fff; border: 1px solid #ddd;
 				  padding: 25px; max-width:800px;
@@ -359,25 +362,22 @@ class Router extends Header {
 	</head>
 	<body>
 		<div>
-			<h1>%s %s</h1>
-			<p>The URL <tt>&#039;<a href='%s'>%s</a>&#039;</tt>
+			<h1>$code $msg</h1>
+			<p>The URL <tt>&#039;<a href='$uri'>$uri</a>&#039;</tt>
 			   caused an error.</p>
 		</div>
 	</body>
 </html>
 EOD;
-		$uri = $_SERVER['REQUEST_URI'];
-		printf($html, $code, $msg, $code, $msg, $uri, $uri);
-
 		static::halt();
 	}
 
 	/**
 	 * Abort.
 	 *
-	 * Use $this->abort_custom() to customize in a subclass. Too
-	 * many unguarded bells and whistles if we are to directly
-	 * override this.
+	 * Create a method called abort_custom() to customize this in a
+	 * subclass. Too many unguarded bells and whistles are at risk
+	 * if we just allow overriding this.
 	 *
 	 * @param int $code HTTP error code.
 	 */
@@ -398,14 +398,18 @@ EOD;
 	 */
 	private function redirect_default($destination) {
 		extract(self::get_header_string(301));
-		self::send_header(0, 0, 0, $code);
-		@header("Location: $destination");
-		$html = <<<EOD
+		static::start_header($code, 0, [
+			"Location: $destination",
+		]);
+		$dst = htmlspecialchars($destination, ENT_QUOTES);
+		echo <<<EOD
 <!doctype html>
 <html>
 	<head>
 		<meta charset='utf-8'/>
-		<title>%s %s</title>
+		<meta name=viewport
+			content="width=device-width, initial-scale=1.0, user-scalable=yes">
+		<title>$code $msg</title>
 		<style type="text/css">
 			body {background-color: #eee; font-family: sans;}
 			div  {background-color: #fff; border: 1px solid #ddd;
@@ -415,21 +419,20 @@ EOD;
 	</head>
 	<body>
 		<div>
-			<h1>%s %s</h1>
-			<p>See <tt>&#039;<a href='%s'>%s</a>&#039;</tt>.</p>
+			<h1>$code $msg</h1>
+			<p>See <tt>&#039;<a href='$dst'>$dst</a>&#039;</tt>.</p>
 		</div>
 	</body>
 </html>
 EOD;
-		printf($html, $code, $msg, $code, $msg,
-			$destination, $destination);
 		static::halt();
 	}
 
 	/**
 	 * Redirect.
 	 *
-	 * Use $this->redirect_custom() to customize in a subclass.
+	 * Create method called redirect_custom() to customize this in
+	 * a subclass.
 	 *
 	 * @param string $destination Destination URL.
 	 */
@@ -452,21 +455,23 @@ EOD;
 		$path, $cache=0, $disposition=false
 	) {
 		if (file_exists($path))
-			self::send_header($path, $cache, 1, 200, $disposition);
+			static::send_file($path, $disposition=null, 200, $cache);
 		$this->abort(404);
 	}
 
 	/**
 	 * Static file.
 	 *
-	 * Use $this->static_file_custom() to customize in a subclass.
+	 * Create method called static_file_custom() to customize this in
+	 * a subclass.
 	 *
 	 * @param string $path Absolute path to file.
 	 * @param int $cache Cache age in seconds.
-	 * @param bool|string $disposition Set content-disposition in header.
-	 *     See self::send_header().
+	 * @param string $disposition Set basename in a content-disposition
+	 *     in header. If true, basename if inferred from path. If null,
+	 *     no content-disposition header will be sent.
 	 */
-	final public function static_file($path, $cache=0, $disposition=false) {
+	final public function static_file($path, $cache=0, $disposition=null) {
 		self::$logger->info("Router: static: '$path'.");
 		if (!method_exists($this, 'static_file_custom'))
 			return $this->static_file_default($path, $cache, $disposition);
