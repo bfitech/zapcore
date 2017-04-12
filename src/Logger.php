@@ -21,6 +21,7 @@ class Logger {
 	private $level = self::ERROR;
 	private $path = null;
 	private $handle = null;
+	private $is_active = true;
 
 	/**
 	 * Constructor.
@@ -64,9 +65,31 @@ class Logger {
 	}
 
 	/**
+	 * Enable writing.
+	 *
+	 * Use this to re-enable logging after temporary deactivation.
+	 */
+	final public function activate() {
+		$this->is_active = true;
+	}
+
+	/**
+	 * Disable writing.
+	 *
+	 * Useful when it is necessary to temporarily disable all
+	 * logging activities, e.g. to stop logger from writing
+	 * sensitive information.
+	 */
+	final public function deactivate() {
+		$this->is_active = false;
+	}
+
+	/**
 	 * Write to handle.
 	 */
 	private function write($level, $msg) {
+		if (!$this->is_active)
+			return;
 		$timestamp = gmdate(\DateTime::ATOM);
 		try {
 			$line = $this->format($timestamp, $level, $msg);

@@ -7,58 +7,96 @@ use BFITech\ZapCore\Logger;
 
 class LoggerTest extends TestCase {
 
-	public function test_logger() {
-		$logfile = getcwd() . '/zapcore-logger-test.log';
-		if (file_exists($logfile))
-			unlink($logfile);
-		$logger = new Logger(Logger::INFO, $logfile);
-		$this->assertTrue(file_exists($logfile));
+	public static $flogs = [];
 
-		# write to logfile
+	public static function tearDownAfterClass() {
+		foreach (self::$flogs as $fl) {
+			if (file_exists($fl))
+				unlink($fl);
+		}
+	}
+
+	private function str_in_file($path, $str) {
+		if (strpos(file_get_contents($path), $str) !== false)
+			return true;
+		return false;
+	}
+
+	public function test_logger_write() {
+		$fl = getcwd() . '/zapcore-logger-test-01.log';
+		self::$flogs[] = $fl;
+
+		$logger = new Logger(Logger::INFO, $fl);
+		$this->assertTrue(file_exists($fl));
+
+		# write to logfile w.r.t log level
+
 		$logger->info("Some info.");
-		$this->assertNotEquals(
-			strpos(file_get_contents($logfile), 'INF'), false);
+		$this->assertTrue($this->str_in_file($fl, 'INF'));
+
 		$logger->warning("Some warning.");
-		$this->assertNotEquals(
-			strpos(file_get_contents($logfile), 'WRN'), false);
+		$this->assertTrue($this->str_in_file($fl, 'WRN'));
+
 		$logger->error("Some error.");
-		$this->assertNotEquals(
-			strpos(file_get_contents($logfile), 'ERR'), false);
+		$this->assertTrue($this->str_in_file($fl, 'ERR'));
+
 		$logger->debug("Some debug.");
-		$this->assertEquals(
-			strpos(file_get_contents($logfile), 'DEB'), false);
+		$this->assertFalse($this->str_in_file($fl, 'DEB'));
+	}
+
+	public function test_logger_io() {
+		$_fl = getcwd() . '/zapcore-logger-test-';
+
+		$fl2 = $_fl . '02.log';
+		self::$flogs[] = $fl2;
+		touch($fl2);
+
+		$fl3 = $_fl . '03.log';
+		self::$flogs[] = $fl3;
+		touch($fl3);
 
 		# file handle argument overrides file path
-		$logfile_02 = $logfile . '.log';
-		$logger = new Logger(Logger::DEBUG, $logfile,
-			fopen($logfile_02, 'ab'));
+		$logger = new Logger(Logger::DEBUG, $fl2,
+			fopen($fl3, 'ab'));
 		$logger->debug("Some debug.");
-		$this->assertEquals(
-			strpos(file_get_contents($logfile), 'DEB'), false);
+		$this->assertFalse($this->str_in_file($fl2, 'DEB'));
+		$this->assertTrue($this->str_in_file($fl3, 'DEB'));
 
 		# automatically write to STDERR if file is read-only
-		chmod($logfile, 0400);
-		$logger = new Logger(Logger::DEBUG, $logfile);
-		# to not clutter terminal, use 2>/dev/null
-		$logger->info("Auto-redirect logging to STDERR.");
-		$this->assertEquals(
-			strpos(file_get_contents($logfile), 'STDERR'), false);
+		chmod($fl3, 0400);
+		$logger = new Logger(Logger::DEBUG, $fl3);
+		# to not clutter terminal, use 2>/dev/null when
+		# running test
+		$logger->info("XREDIR");
+		$this->assertFalse($this->str_in_file($fl3, 'XREDIR'));
 
 		# if chmod-ing happens after opening handle, handle is
 		# still writable
-		$logfile_03 = $logfile_02 . '.log';
-		if (file_exists($logfile_03))
-			unlink($logfile_03);
-		file_put_contents($logfile_03, "START\n");
-		$logger = new Logger(Logger::DEBUG, $logfile_03);
-		chmod($logfile_03, 0400);
-		$logger->info("Some info.");
-		$content = file_get_contents($logfile_03);
-		$this->assertEquals(substr($content, 0, 5), "START");
-		$this->assertNotEquals(strpos($content, "INF"), false);
+		file_put_contents($fl2, "XSTART\n");
+		$logger = new Logger(Logger::DEBUG, $fl2);
+		chmod($fl2, 0400);
+		$logger->info("XNOWRITE");
+		$this->assertTrue($this->str_in_file($fl2, 'XSTART'));
+		$this->assertTrue($this->str_in_file($fl2, 'XNOWRITE'));
+	}
 
-		foreach ([$logfile, $logfile_02, $logfile_03] as $fl)
-			unlink($fl);
+	public function test_logger_activation() {
+		$fl = getcwd() . '/zapcore-logger-test-04.log';
+		self::$flogs[] = $fl;
+
+		$logger = new Logger(Logger::DEBUG, $fl);
+		$logger->info("X01");
+		$this->assertTrue($this->str_in_file($fl, 'X01'));
+
+		# temporarily deactivate
+		$logger->deactivate();
+		$logger->info("X02");
+		$this->assertFalse($this->str_in_file($fl, 'X02'));
+
+		# re-activate
+		$logger->activate();
+		$logger->info("X03");
+		$this->assertTrue($this->str_in_file($fl, 'X03'));
 	}
 
 }
