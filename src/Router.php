@@ -345,13 +345,12 @@ class Router extends Header {
 		extract(self::get_header_string($code));
 		static::start_header($code);
 		$uri = htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES);
-		echo <<<EOD
-<!doctype html>
+		echo "<!doctype html>
 <html>
 	<head>
 		<meta charset=utf-8>
 		<meta name=viewport
-			content="width=device-width, initial-scale=1.0, user-scalable=yes">
+			content='width=device-width, initial-scale=1.0, user-scalable=yes'>
 		<title>$code $msg</title>
 		<style>
 			body {background-color: #eee; font-family: sans;}
@@ -367,8 +366,7 @@ class Router extends Header {
 			   caused an error.</p>
 		</div>
 	</body>
-</html>
-EOD;
+</html>";
 		static::halt();
 	}
 
@@ -402,15 +400,14 @@ EOD;
 			"Location: $destination",
 		]);
 		$dst = htmlspecialchars($destination, ENT_QUOTES);
-		echo <<<EOD
-<!doctype html>
+		echo "<!doctype html>
 <html>
 	<head>
 		<meta charset='utf-8'/>
 		<meta name=viewport
-			content="width=device-width, initial-scale=1.0, user-scalable=yes">
+			content='width=device-width, initial-scale=1.0, user-scalable=yes'>
 		<title>$code $msg</title>
-		<style type="text/css">
+		<style>
 			body {background-color: #eee; font-family: sans;}
 			div  {background-color: #fff; border: 1px solid #ddd;
 				  padding: 25px; max-width:800px;
@@ -423,8 +420,7 @@ EOD;
 			<p>See <tt>&#039;<a href='$dst'>$dst</a>&#039;</tt>.</p>
 		</div>
 	</body>
-</html>
-EOD;
+</html>";
 		static::halt();
 	}
 

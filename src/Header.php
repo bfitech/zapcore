@@ -90,6 +90,7 @@ class Header {
 	 * @param string $header_string Header string.
 	 * @param bool $replace The 'replace' option for standard
 	 *     header() function.
+	 * @codeCoverageIgnore
 	 */
 	public static function header($header_string, $replace=false) {
 		header($header_string, $replace);
@@ -105,6 +106,7 @@ class Header {
 	 *     immediately printed. For other types, it's completely at
 	 *     the mercy of `print_r()`: formatted array, true becomes '1',
 	 *     etc. Use with care.
+	 * @codeCoverageIgnore
 	 */
 	public static function halt($arg=null) {
 		if ($arg === null)
@@ -122,6 +124,8 @@ class Header {
 	 * Override this for non-web context, e.g. for testing.
 	 * Parameters are exactly the same with the wrapped
 	 * function.
+	 *
+	 * @codeCoverageIgnore
 	 */
 	public static function send_cookie(
 		$name, $value='', $expire=0, $path='', $domain='',
