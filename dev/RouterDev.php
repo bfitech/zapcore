@@ -10,18 +10,26 @@ use BFITech\ZapCore\Router;
 /**
  * Mock router.
  *
- * Use this class to try out routing without running it
- * through HTTP.
+ * Use this class to try out routing without running it through HTTP.
  */
 class RouterDev extends Router {
 
+	/** HTTP code. */
 	public static $code = 200;
+	/** Response HTTP headers. */
 	public static $head = [];
+	/** Raw response body. */
 	public static $body_raw = null;
+	/** Response body parsed as JSON. */
 	public static $body = null;
+	/** Default errno for JSON response. */
 	public static $errno = 0;
+	/** Default data for JSON response. */
 	public static $data = [];
 
+	/**
+	 * Reset fake HTTP variables and properties.
+	 */
 	public static function reset() {
 		$_SERVER['REQUEST_URI'] = '/';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -34,6 +42,9 @@ class RouterDev extends Router {
 		self::$data = [];
 	}
 
+	/**
+	 * Patched Header::header().
+	 */
 	public static function header($header_string, $replace=false) {
 		if (strpos($header_string, 'HTTP/1') !== false) {
 			self::$code = explode(' ', $header_string)[1];
@@ -42,12 +53,18 @@ class RouterDev extends Router {
 		}
 	}
 
+	/**
+	 * Patched Header::halt().
+	 */
 	public static function halt($arg=null) {
 		if (!$arg)
 			return;
 		echo $arg;
 	}
 
+	/**
+	 * Patched Router::wrap_callback().
+	 */
 	public function wrap_callback($callback, $args=[]) {
 		ob_start();
 		$callback($args);
@@ -62,6 +79,9 @@ class RouterDev extends Router {
 		}
 	}
 
+	/**
+	 * Custom abort for testing.
+	 */
 	public function abort_custom($code) {
 		self::$code = $code;
 		self::$body = "ERROR: $code";
@@ -69,6 +89,9 @@ class RouterDev extends Router {
 		self::$data = [];
 	}
 
+	/**
+	 * Custom redirect for testing.
+	 */
 	public function redirect_custom($url) {
 		self::$code = 301;
 		self::$head = ["Location: $url"];
@@ -77,6 +100,9 @@ class RouterDev extends Router {
 		self::$data = [$url];
 	}
 
+	/**
+	 * Custom static file serving for testing.
+	 */
 	public function static_file_custom(
 		$path, $cache=0, $disposition=false
 	) {
