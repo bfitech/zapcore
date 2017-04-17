@@ -3,8 +3,24 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
+use BFITech\ZapCore\Router;
 use BFITech\ZapCoreDev\RouterDev;
 
+
+/**
+ * Class for testing defaults.
+ *
+ * This is to test default abort, static file handler
+ * an redirects.
+ */
+class RouterDefault extends Router {
+	public static function header($header_string, $replace=false) {
+		RouterDev::header($header_string, $replace);
+	}
+	public static function halt($arg=null) {
+		RouterDev::halt($arg);
+	}
+}
 
 class RouterTest extends TestCase {
 
@@ -24,8 +40,43 @@ class RouterTest extends TestCase {
 		return new RouterDev(null, null, false, self::$logger);
 	}
 
+	public function test_default() {
+		$_SERVER['REQUEST_URI'] = '/';
+
+		# abort 404
+		ob_start();
+		$core = new RouterDefault();
+		$core->route('/s', function(){});
+		$core->shutdown();
+		$rv = ob_get_clean();
+		$this->assertNotEquals(strpos($rv, '404'), false);
+
+		# redirect
+		ob_start();
+		$core = new RouterDefault();
+		$core->route('/', function($args) use($core){
+			$core->redirect('/somewhere_else');
+		});
+		$core->shutdown();
+		$rv = ob_get_clean();
+		$this->assertNotEquals(
+			strpos($rv, '301 Moved'), false);
+
+		# send file
+		ob_start();
+		$core = new RouterDefault(null, null, false);
+		$core->route('/', function($args) use($core){
+			$core->static_file(__FILE__);
+		});
+		$rv = ob_get_clean();
+		$this->assertEquals(
+			strpos($rv, file_get_contents(__FILE__)), false);
+
+	}
+
 	public function test_constructor() {
 		global $argv;
+
 		$core = new RouterDev(null, null, false, self::$logger);
 
 		# @note On CLI, Router::get_home() will resolve to
@@ -111,10 +162,21 @@ class RouterTest extends TestCase {
 		$_SERVER['HTTP_REFERER'] = 'http://localhost';
 
 		$core = $this->make_router();
-		$core->route('/getme', function($args){
+		$core->route('/getme', function($args) use($core){
 			$this->assertEquals($args['get'], ['x' => 'y']);
+			$core::halt("OK");
 		}, ['GET']);
 		$this->assertEquals($core->get_request_path(), '/getme');
+		$this->assertEquals($core::$body_raw, 'OK');
+
+		$_SERVER['REQUEST_URI'] = '/getjson/';
+		$core = $this->make_router();
+		$core->route('/getjson', function($args) use($core){
+			$this->assertEquals($args['get'], ['x' => 'y']);
+			$core::print_json(0, $args['get']);
+		}, ['GET']);
+		$this->assertEquals($core::$errno, 0);
+		$this->assertEquals($core::$data['x'], 'y');
 	}
 
 	public function test_route_patch() {

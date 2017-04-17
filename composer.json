@@ -23,7 +23,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "BFITech\\ZapCoreDev\\": "src/dev"
+      "BFITech\\ZapCoreDev\\": "dev"
     }
   },
   "extra": {
