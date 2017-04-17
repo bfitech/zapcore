@@ -27,7 +27,7 @@ class RouterTest extends TestCase {
 	public static $logger;
 
 	public static function setUpBeforeClass() {
-		$logfile = getcwd() . '/zapcore-test.log';
+		$logfile = __DIR__ . '/zapcore-test.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		self::$logger = new Logger(Logger::DEBUG, $logfile);
