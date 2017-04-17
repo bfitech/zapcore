@@ -3,9 +3,15 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore as zc;
-use BFITech\ZapCoreDev as zd;
+use BFITech\ZapCoreDev\CoreDev;
 
 
+/**
+ * Run core tests via HTTP.
+ *
+ * @requires OS Linux
+ * @todo Support OSes other than Linux.
+ */
 class CoreTest extends TestCase {
 
 	public static $server_pid;
@@ -16,13 +22,13 @@ class CoreTest extends TestCase {
 		self::$logfile = __DIR__ . '/zapcore-test.log';
 		if (file_exists(self::$logfile))
 			unlink(self::$logfile);
-		self::$server_pid = zd\CoreDev::server_up(__DIR__);
+		self::$server_pid = CoreDev::server_up(__DIR__);
 		if (!self::$server_pid)
 			die();
 	}
 
 	public static function tearDownAfterClass() {
-		zd\CoreDev::server_down(self::$server_pid);
+		CoreDev::server_down(self::$server_pid);
 	}
 
 	public static function client(
@@ -39,6 +45,9 @@ class CoreTest extends TestCase {
 		return self::client($kwargs);
 	}
 
+	/**
+	 * @todo Move this out of HTTP context.
+	 */
 	public function test_common() {
 		if (file_exists('/bin/bash'))
 			$this->assertEquals(
