@@ -3,39 +3,8 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
-use BFITech\ZapCore\Router;
+use BFITech\ZapCoreDev\RouterDev;
 
-
-// Router with simplified constructor and disabled die()
-// wrapper is all we need.
-class RouterAlive extends Router {
-	public function __construct() {
-		$logfile = getcwd() . '/zapcore-test-mock-router.log';
-		$logger = new Logger(Logger::ERROR, $logfile);
-		parent::__construct(null, null, false, $logger);
-	}
-	public static function header($header_string, $replace=false) {
-		echo "$header_string\n";
-	}
-	public static function halt($str=null) {
-		// don't die
-		return;
-	}
-}
-
-class RouterCustom extends RouterAlive {
-	public function abort_custom($code) {
-		echo "ERROR: $code";
-	}
-	public function redirect_custom($url) {
-		echo "Location: $url";
-	}
-	public function static_file_custom(
-		$path, $cache=0, $disposition=false
-	) {
-		echo file_exists($path) ? "OK" : "NO";
-	}
-}
 
 class RouterTest extends TestCase {
 
@@ -43,23 +12,21 @@ class RouterTest extends TestCase {
 
 	public static function setUpBeforeClass() {
 		$logfile = getcwd() . '/zapcore-test.log';
+		if (file_exists($logfile))
+			unlink($logfile);
 		self::$logger = new Logger(Logger::DEBUG, $logfile);
 	}
 
 	public static function tearDownAfterClass() {
-		foreach([
-			'/zapcore-test.log',
-			'/zapcore-test-mock-router.log'
-		] as $logbase) {
-			$logfile = getcwd() . $logbase;
-			if (file_exists($logfile))
-				unlink($logfile);
-		}
+	}
+
+	private function make_router() {
+		return new RouterDev(null, null, false, self::$logger);
 	}
 
 	public function test_constructor() {
 		global $argv;
-		$core = new Router(null, null, false, self::$logger);
+		$core = new RouterDev(null, null, false, self::$logger);
 
 		# @note On CLI, Router::get_home() will resolve to
 		#     the calling script, which in this case,
@@ -74,7 +41,7 @@ class RouterTest extends TestCase {
 	}
 
 	public function test_path_parser() {
-		$core = new Router(null, null, false, self::$logger);
+		$core = new RouterDev(null, null, false, self::$logger);
 
 		# regular
 		$rv = $core->path_parser('/x/y/');
@@ -111,7 +78,7 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/test/z';
 		$_SERVER['HTTP_REFERER'] = 'http://localhost';
 
-		$core = new RouterAlive();
+		$core = $this->make_router();
 		$this->assertEquals($core->get_request_path(), '/test/z');
 
 		# invalid callback
@@ -143,11 +110,11 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/getme/';
 		$_SERVER['HTTP_REFERER'] = 'http://localhost';
 
-		$core = new RouterAlive();
-		$core->route('/getme', function($args) use($core){
+		$core = $this->make_router();
+		$core->route('/getme', function($args){
 			$this->assertEquals($args['get'], ['x' => 'y']);
-			$this->assertEquals($core->get_request_path(), '/getme');
 		}, ['GET']);
+		$this->assertEquals($core->get_request_path(), '/getme');
 	}
 
 	public function test_route_patch() {
@@ -155,7 +122,7 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'PATCH';
 		$_SERVER['REQUEST_URI'] = '/patchme/';
 
-		$core = new RouterAlive();
+		$core = $this->make_router();
 		$this->assertEquals($core->get_request_path(), '/patchme');
 		$core->route('/patchme', function($args) use($core){
 			# we can't fake PATCH with globals here
@@ -168,12 +135,10 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'TRACE';
 		$_SERVER['REQUEST_URI'] = '/traceme/';
 
-		$core = new RouterAlive();
-		ob_start();
+		$core = $this->make_router();
 		$core->route('/traceme', function($args){}, 'TRACE');
-		$rv = ob_get_clean();
-		# regardless the request, TRACE will always gives 405
-		$this->assertNotEquals(strpos($rv, '405'), false);
+		# regardless the request, TRACE will always give 405
+		$this->assertEquals($core::$code, 405);
 	}
 
 	public function test_route_notfound() {
@@ -181,16 +146,13 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['REQUEST_URI'] = '/findme/';
 
-		# patched router
-		$core = new RouterAlive();
-		ob_start();
+		$core = $this->make_router();
 		# without this top-level route, $core->shutdown()
 		# will end up with 501
 		$core->route('/', function($args){});
 		# must invoke shutdown manually since no path matches
 		$core->shutdown();
-		$rv = ob_get_clean();
-		$this->assertNotEquals(strpos($rv, '404'), false);
+		$this->assertEquals($core::$code, 404);
 	}
 
 	public function test_route_static() {
@@ -198,73 +160,60 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['REQUEST_URI'] = '/static/' . basename(__FILE__);
 
-		$core = new RouterAlive();
+		$core = $this->make_router();
 		$core->route('/static/<path>', function($args) use($core){
-			ob_start();
 			$core->static_file(__DIR__ . '/' . $args['params']['path']);
-			$rv = ob_get_clean();
-			$this->assertNotEquals(
-				strpos($rv, file_get_contents(__FILE__)), false);
+			$this->assertEquals($core::$code, 200);
+			$this->assertEquals(
+				$core::$body_raw, file_get_contents(__FILE__));
 		});
 
-		$core = new RouterCustom();
+		$_SERVER['REQUEST_URI'] = '/static/notfound.txt';
+		$core = $this->make_router();
 		$core->route('/static/<path>', function($args) use($core){
-			ob_start();
 			$core->static_file(__DIR__ . '/' . $args['params']['path']);
-			$rv = ob_get_clean();
-			$this->assertEquals($rv, 'OK');
 		});
+		$this->assertEquals($core::$code, 404);
 	}
 
 	public function test_route_abort() {
-		# mock input
 		$_SERVER['REQUEST_URI'] = '/notfound';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 
-		$core = new RouterAlive();
-		$core->route('/notfound', function($args) use($core) {
-			ob_start();
-			$core->abort(404);
-			$rv = ob_get_clean();
-			# default 404 page contains string '404'
-			$this->assertNotEquals(
-				strpos($rv, '404'), false);
+		$core = $this->make_router();
+		$core->route('/', function($args) use($core) {
+			echo "This will never be reached.";
 		}, 'GET');
+		# invoke shutdown manually
+		$core->shutdown();
+		$this->assertEquals($core::$code, 404);
 
-		$core = new RouterCustom();
-		$core->route('/notfound', function($args) use($core) {
-			ob_start();
-			$core->abort(404);
-			$rv = ob_get_clean();
-			# default 404 page contains string '404'
-			$this->assertNotEquals(
-				strpos($rv, '404'), false);
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+
+		$core = $this->make_router();
+		$core->route('/', function($args) use($core) {
+			echo "This will never be reached.";
 		}, 'GET');
+		$core->shutdown();
+		# POST is never registered, hence, POST request will give 501
+		$this->assertEquals($core::$code, 501);
 	}
 
 	public function test_route_redirect() {
-		# mock input
 		$_SERVER['REQUEST_URI'] = '/redirect';
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 
-		$core = new RouterAlive();
+		$core = $this->make_router();
 		$core->route('/redirect', function($args) use($core) {
-			ob_start();
 			$core->redirect('/destination');
-			$rv = ob_get_clean();
-			# default redirect page contains string '301'
-			$this->assertNotEquals(
-				strpos($rv, '301'), false);
 		}, 'GET');
+		$this->assertEquals($core::$code, 301);
 
-		$core = new RouterCustom();
+		$core = $this->make_router();
 		$core->route('/redirect', function($args) use($core) {
-			ob_start();
 			$core->redirect('/destination');
-			$rv = ob_get_clean();
-			$this->assertNotEquals(
-				strpos($rv, '/destination'), false);
 		}, 'GET');
+		$this->assertTrue(in_array('Location: /destination', $core::$head));
 	}
 
 }
