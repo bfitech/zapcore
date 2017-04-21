@@ -55,6 +55,8 @@ class RouterDev extends Router {
 
 	/**
 	 * Patched Header::send_cookie().
+	 *
+	 * @codeCoverageIgnore
 	 */
 	public static function send_cookie(
 		$name, $value='', $expire=0, $path='', $domain='',
