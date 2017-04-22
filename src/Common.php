@@ -243,7 +243,7 @@ class Common {
 	 * @return array A complete array ready to be extract()ed.
 	 */
 	final public static function extract_kwargs($input_array, $init_array) {
-		foreach ($init_array as $key => $val) {
+		foreach (array_keys($init_array) as $key) {
 			if (isset($input_array[$key]))
 				$init_array[$key] = $input_array[$key];
 		}

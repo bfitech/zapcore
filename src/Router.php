@@ -82,7 +82,7 @@ class Router extends Header {
 				$port = null;
 			if ($port == 80)
 				$port = null;
-			if ($port == 443 && $prot == 'https')
+			if ($port == 443 && $proto == 'https')
 				$port = null;
 			if ($port && strpos($host, ':') === false)
 				$host .= ':' . $port;
@@ -136,8 +136,7 @@ class Router extends Header {
 		$valid_chardelims = $valid_chars . '\/<>\{\}';
 		if (!preg_match('!^[' . $valid_chardelims . ']+$!', $path)) {
 			# never allow invalid characters
-			self::$logger->error(
-				sprintf("Router: path invalid: '%s'.", $path));
+			self::$logger->error("Router: path invalid: '$path'.");
 			return [[], []];
 		}
 
@@ -161,8 +160,7 @@ class Router extends Header {
 		}
 		if (count($keys) > count(array_unique($keys))) {
 			# never allow key reuse to prevent unexpected overrides
-			self::$logger->error(sprintf(
-				"Router: param keys reused: '%s'.", $path));
+			self::$logger->error("Router: param keys reused: '$path'.");
 			return [[], []];
 		}
 
@@ -456,10 +454,10 @@ class Router extends Header {
 	 * Default static file.
 	 */
 	private function static_file_default(
-		$path, $cache=0, $disposition=false
+		$path, $cache=0, $disposition=null
 	) {
 		if (file_exists($path))
-			static::send_file($path, $disposition=null, 200, $cache);
+			static::send_file($path, $disposition, 200, $cache);
 		$this->abort(404);
 	}
 

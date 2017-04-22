@@ -147,9 +147,9 @@ class Header {
 	) {
 		extract(self::get_header_string($code));
 
-		$prot = isset($_SERVER['SERVER_PROTOCOL'])
+		$proto = isset($_SERVER['SERVER_PROTOCOL'])
 			? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.1';
-		static::header("$prot $code $msg");
+		static::header("$proto $code $msg");
 		if ($cache) {
 			$cache = intval($cache);
 			$expire = time() + $cache;
@@ -298,7 +298,7 @@ class Header {
 			if ($forbidden_code)
 				$http_code = $forbidden_code;
 		}
-		self::print_json($retval[0], $retval[1], $http_code);
+		self::print_json($retval[0], $retval[1], $http_code, $cache);
 	}
 
 }
