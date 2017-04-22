@@ -13,8 +13,8 @@ class Router extends Header {
 	private $request_comp = [];
 	private $request_routes = [];
 
-	private $_home = null;
-	private $_host = null;
+	private $home = null;
+	private $host = null;
 
 	private $request_handled = false;
 
@@ -27,8 +27,10 @@ class Router extends Header {
 	/**
 	 * Constructor.
 	 *
-	 * @param string|null $home Override home path autodetection.
-	 * @param string|null $host Override host path autodetection.
+	 * @param string|null $home Override home path autodetection if
+	 *     it's a string.
+	 * @param string|null $host Override host path autodetection if
+	 *     it's a string.
 	 * @param bool $shutdown Whether shutdown function should be
 	 *     invoked at the end. Useful for multiple routers in one
 	 *     project.
@@ -41,10 +43,10 @@ class Router extends Header {
 		self::$logger = $logger ? $logger : new Logger();
 		self::$logger->debug('Router: started.');
 
-		$this->_home = $home;
-		$this->_host = $host;
-		$this->_request_parse();
+		$this->home = $home;
+		$this->host = $host;
 
+		$this->request_parse();
 		if ($shutdown)
 			register_shutdown_function([$this, 'shutdown']);
 	}
@@ -52,23 +54,25 @@ class Router extends Header {
 	/**
 	 * Request parser.
 	 */
-	private function _request_parse() {
+	private function request_parse() {
 
 		if ($this->request_path)
 			return;
 
-		if ($this->_home === null) {
+		if ($this->home === null) {
+			// @warning When run on CLI and script name becomes path to
+			// executing script, use $this->home to override
 			$home = dirname($_SERVER['SCRIPT_NAME']);
 			if ($home === '.')
-				# happens on CLI
+				# sometimes happens on CLI
 				$home = '/';
 			if ($home != '/')
 				$home = rtrim($home, '/'). '/';
-			$this->_home = $home;
+			$this->home = $home;
 		}
 
-		if ($this->_host === null) {
-			$prot = isset($_SERVER['HTTPS']) && !empty($_SERVER['HTTPS'])
+		if ($this->host === null) {
+			$proto = isset($_SERVER['HTTPS']) && !empty($_SERVER['HTTPS'])
 				? 'https://' : 'http://';
 			$host = isset($_SERVER['SERVER_NAME'])
 				? $_SERVER['HTTP_HOST'] : 'localhost';
@@ -82,24 +86,28 @@ class Router extends Header {
 				$port = null;
 			if ($port && strpos($host, ':') === false)
 				$host .= ':' . $port;
-			$host = $prot . $host . $this->_home;
-			$this->_host = $host;
+			$host = $proto . $host . $this->home;
+			$this->host = $host;
 		}
 
 		# initialize from request uri
-		$req = isset($_SERVER['REQUEST_URI'])
+		$url = isset($_SERVER['REQUEST_URI'])
 			? $_SERVER['REQUEST_URI'] : '';
-		# remove query string
-		$req = preg_replace("!\?.+$!", '', $req);
-		# remove script name
-		$home = "/^" . str_replace("/", "\\/", quotemeta($this->_home)) . "/";
-		$req = preg_replace($home, '', $req);
-		# trim slashes
-		$req = trim($req, "/");
 
-		# store in private variables
-		$this->request_path = '/' . $req;
-		$this->request_comp = explode('/', $req);
+		# remove query string
+		$rpath = parse_url($url)['path'];
+
+		# remove script name, won't take effect when run from CLI
+		# and script name is /usr/local/bin/php or the like
+		if ($this->home != '/' && strpos($rpath, $this->home === 0))
+			$rpath = substr($rpath, strlen($this->home));
+
+		# trim slashes
+		$rpath = trim($rpath, "/");
+
+		# store in private properties
+		$this->request_path = '/' . $rpath;
+		$this->request_comp = explode('/', $rpath);
 		self::$logger->debug(sprintf(
 			"Router: request path: '%s'.",
 			$this->request_path));
@@ -497,14 +505,14 @@ class Router extends Header {
 	 * Show home.
 	 */
 	public function get_home() {
-		return $this->_home;
+		return $this->home;
 	}
 
 	/**
 	 * Show host.
 	 */
 	public function get_host() {
-		return $this->_host;
+		return $this->host;
 	}
 
 	/**

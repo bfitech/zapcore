@@ -53,7 +53,7 @@ $core->route(
 });
 
 $core->route('/some/thing', function($args) use($core){
-	extract($args['get'], EXTR_SKIP);
+	extract($args['get']);
 	if (!isset($var1) || !isset($var2))
 		$core->abort(404);
 	$core->redirect("/some/$var1/other/$var2/thing");
