@@ -37,7 +37,9 @@ class RouterTest extends TestCase {
 	}
 
 	private function make_router() {
-		return new RouterDev(null, null, false, self::$logger);
+		return (new RouterDev())
+			->config('logger', self::$logger)
+			->init();
 	}
 
 	public function test_default() {
@@ -53,7 +55,7 @@ class RouterTest extends TestCase {
 
 		# redirect
 		ob_start();
-		$core = new RouterDefault();
+		$core->deinit();
 		$core->route('/', function($args) use($core){
 			$core->redirect('/somewhere_else');
 		});
@@ -64,7 +66,7 @@ class RouterTest extends TestCase {
 
 		# send file
 		ob_start();
-		$core = new RouterDefault(null, null, false);
+		$core->deinit();
 		$core->route('/', function($args) use($core){
 			$core->static_file(__FILE__);
 		});
@@ -77,18 +79,29 @@ class RouterTest extends TestCase {
 	public function test_constructor() {
 		global $argv;
 
-		$core = new RouterDev(null, null, false, self::$logger);
+		$core = (new RouterDev())
+			->config('shutdown', false)
+			->init();
 
-		# @note On CLI, Router::get_home() will resolve to
-		#     the calling script, which in this case,
-		#     phpunit script.
+		# On CLI, Router::get_home() will resolve to the calling
+		# script, which in this case, phpunit script.
 		$home = $core->get_home();
 		$this->assertEquals(
 			rtrim($home, '/'), dirname($argv[0]));
 
-		# @note On CLI, Router::get_host() is meaningless.
+		# On CLI, Router::get_host() is meaningless and request parser
+		# will just assign 'http://localhost'.
 		$this->assertEquals(
 			$core->get_host(), "http://localhost${home}");
+
+		# Override autodetect.
+		$core->deinit()
+			->config('home', '/')
+			->config('host', 'http://localhost')
+			->config('wut', null)
+			->init();
+		$this->assertEquals($core->get_home(), '/');
+		$this->assertEquals($core->get_host(), 'http://localhost');
 	}
 
 	public function test_path_parser() {

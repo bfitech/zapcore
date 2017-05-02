@@ -15,7 +15,9 @@ class Router extends Header {
 
 	private $home = null;
 	private $host = null;
+	private $auto_shutdown = true;
 
+	private $request_parsed = false;
 	private $request_handled = false;
 
 	private $method_collection = [];
@@ -42,13 +44,81 @@ class Router extends Header {
 	) {
 		self::$logger = $logger ? $logger : new Logger();
 		self::$logger->debug('Router: started.');
-
 		$this->home = $home;
 		$this->host = $host;
+		$this->auto_shutdown = $shutdown;
+	}
 
+	/**
+	 * Configure.
+	 *
+	 * If using constructor is too verbose or cumbersome, use this to
+	 * finetune properties.
+	 *
+	 * @param string $key Configuration key.
+	 * @param mixed $val Configuration value.
+	 */
+	final public function config($key, $val) {
+		if ($this->request_parsed)
+			return $this;
+		switch ($key) {
+			case 'home':
+				$this->home = $val;
+				return $this;
+			case 'host':
+				$this->host = $val;
+				return $this;
+			case 'shutdown':
+				$this->auto_shutdown = $val;
+				return $this;
+			case 'logger':
+				if ($val instanceof Logger) {
+					self::$logger = $val;
+					self::$logger->debug('Router: started.');
+				}
+				return $this;
+		}
+		self::$logger->warning(
+			"Router: invalid configuration key: '$key'.");
+		return $this;
+	}
+
+	/**
+	 * Initialize parser and shutdown handler.
+	 *
+	 * Only manually call this in case you need to do something prior
+	 * to calling $this->route() as that method will internally call
+	 * this.
+	 */
+	final public function init() {
+		if ($this->request_parsed)
+			return;
 		$this->request_parse();
-		if ($shutdown)
+		if ($this->auto_shutdown)
 			register_shutdown_function([$this, 'shutdown']);
+		$this->request_parsed = true;
+		return $this;
+	}
+
+	/**
+	 * Reset properties to default values.
+	 *
+	 * Mostly useful for testing, so that you don't have to repeatedly
+	 * instantiate the object, especially when constructor parameters
+	 * are considerably verbose.
+	 */
+	final public function deinit() {
+		$this->request_path = null;
+		$this->request_comp = [];
+		$this->request_routes = [];
+
+		$this->request_parsed = false;
+		$this->request_handled = false;
+
+		$this->method_collection = [];
+		$this->current_method = null;
+
+		return $this;
 	}
 
 	/**
@@ -209,13 +279,16 @@ class Router extends Header {
 	 *     Callback takes one argument containing HTTP variables
 	 *     collected by route processor.
 	 * @param string $method HTTP request method.
-	 * @param bool $is_raw Accept raw data instead of parsed
+	 * @param bool $is_raw If true, accept raw data instead of parsed
 	 *     HTTP query. Only applicable for POST method. Useful in,
 	 *     e.g. JSON request body.
 	 */
 	final public function route(
-		$path, $callback, $method='GET', $is_raw=false
+		$path, $callback, $method='GET', $is_raw=null
 	) {
+
+		# check if parser has been initialized
+		$this->init();
 
 		# request has been handled
 		if ($this->request_handled)
@@ -473,7 +546,9 @@ class Router extends Header {
 	 *     in header. If true, basename if inferred from path. If null,
 	 *     no content-disposition header will be sent.
 	 */
-	final public function static_file($path, $cache=0, $disposition=null) {
+	final public function static_file(
+		$path, $cache=0, $disposition=null
+	) {
 		self::$logger->info("Router: static: '$path'.");
 		if (!method_exists($this, 'static_file_custom'))
 			return $this->static_file_default($path, $cache, $disposition);
