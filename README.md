@@ -14,11 +14,11 @@ A very simple PHP router and other utilities.
 
 ## 0. Reason
 
-![but why?](http://gph.to/2pMcVKp)
+[![but why](http://gph.to/2pMcVKp)](https://en.wikipedia.org/wiki/Category:PHP_frameworks)
 
 Yeah, why another framework?
 
-These are a few (hopefully good enough) reason:
+These are a few (hopefully good enough) reasons:
 
 0.  web service-oriented
 
@@ -78,7 +78,7 @@ $ x-www-browser http://localhost:9999
     $ composer -vvv install -no
     ```
 
-2.  Make your changes. Sources are in `/src` and `/dev` directories.
+2.  Make your changes. Sources are in `./src` and `./dev` directories.
 
     ```bash
     $ # do your thing, e.g.:
