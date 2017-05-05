@@ -14,7 +14,7 @@ A very simple PHP router and other utilities.
 
 ## 0. Reason
 
-[![but why](http://gph.to/2pMcVKp)](https://en.wikipedia.org/wiki/Category:PHP_frameworks)
+[![but why?](http://s.bandungfe.net/i/but-why.gif)](https://en.wikipedia.org/wiki/Category:PHP_frameworks)
 
 Yeah, why another framework?
 
@@ -66,7 +66,304 @@ $ php -S 0.0.0.0:9999 &
 $ x-www-browser http://localhost:9999
 ```
 
-## 3. Contribute
+## 3. Usage
+
+### 3.0 Routing
+
+Routing in `zapcore` is the responsibility of the method `Router::route`.
+Here's a simple route with `/hello` path, a regular function as the
+callback to handle the request data, applied to `PUT` request method.
+
+```php
+$core = new Router();
+
+function my_callback($args) {
+	global $core;
+	$name = $args['put'];
+	file_put_contents('name.txt', $name);
+	die(sprintf("Hello, %s.", $name));
+}
+
+$core->route('/hello', 'my_callback', 'PUT');
+```
+
+which will produce:
+
+```bash
+$ curl -XPUT -d Johnny localhost:9999/hello
+Hello, Johnny.
+```
+
+We can use multiple methods for the same path:
+
+```php
+$core = new Router();
+
+function my_callback($args) {
+	global $core;
+	if ($core->get_request_method() == 'PUT') {
+		$name = $args['put'];
+	} else {
+		if (!isset($args['post']['name']))
+			die("Who are you?");
+		$name = $args['post']['name'];
+	}
+	file_put_contents('name.txt', $name);
+	die(sprintf("Hello, %s.", $name));
+}
+
+$core->route('/hello', 'my_callback', ['PUT', 'POST']);
+```
+
+Instead of using global, we can use closure for the
+callback:
+
+```php
+function my_callback($args, $core) {
+	if ($core->get_request_method() == 'PUT') {
+		$name = $args['put'];
+	} else {
+		if (!isset($args['post']['name']))
+			die("Who are you?");
+		$name = $args['post']['name'];
+	}
+	file_put_contents('name.txt', $name);
+	die(sprintf("Hello, %s.", $name));
+}
+
+$core = new Router();
+
+$core->route('/hello', function($args) use($core) {
+	my_callback($args, $core);
+}, ['PUT', 'POST']);
+```
+
+Callback can be a method instead of function:
+
+```php
+$core = new Router();
+
+class MyName {
+	public function my_callback($args) {
+		global $core;
+		if ($core->get_request_method() == 'PUT') {
+			$name = $args['put'];
+		} else {
+			if (!isset($args['post']['name']))
+				die("Who are you?");
+			$name = $args['post']['name'];
+		}
+		file_put_contents('name.txt', $name);
+		die(sprintf("Hello, %s.", $name));
+	}
+}
+
+$myname = new MyName();
+
+$core->route('/hello', [$myname, 'my_callback'],
+	['PUT', 'POST']);
+```
+
+And finally, you can subclass Router:
+
+```php
+class MyName extends Router {
+	public function my_callback($args) {
+		if ($this->get_request_method() == 'PUT') {
+			$name = $args['put'];
+		} else {
+			if (!isset($args['post']['name']))
+				die("Who are you?");
+			$name = $args['post']['name'];
+		}
+		file_put_contents('name.txt', $name);
+		die(sprintf("Hello, %s.", $name));
+	}
+	public function my_home($args) {
+		if (!file_exists('name.txt'))
+			die("Hello, stranger.");
+		$name = file_get_contents('name.txt');
+		die(sprintf("You're home, %s.", $name));
+	}
+}
+
+$core = new MyName();
+$core->route('/hello', [$core, 'my_callback'], ['PUT', 'POST']);
+$core->route('/',      [$core, 'my_home']);
+```
+
+When request URI and request method do not match any route, a
+default 404 error page will be sent unless you set `shutdown`
+parameter to `false` in the constructor.
+
+```bash
+$ curl -si http://localhost/hello | head -n1
+HTTP/1.1 404 Not Found
+```
+
+### 3.1 Dynamic Path
+
+Apart from static path of the form `/path/to/some/where`, there
+are also two types of construct which will make a dynamic path:
+
+```php
+class MyPath extends Router {
+	public function my_short_param($args) {
+		printf("Showing profile for user '%s'.\n",
+			$args['params']['short_name']);
+	}
+	public function my_long_param($args) {
+		printf("Showing revision 1 of file '%s'.\n",
+			$args['params']['long_name']);
+	}
+}
+
+$core = new MyPath();
+// short parameter with '<>'
+$core->route('/user/<short_name>/profile',  [$core, 'my_short_param']);
+// long parameter with '{}'
+$core->route('/file/{long_name}/v1',        [$core, 'my_long_param']);
+```
+
+which will produce:
+
+```bash
+$ curl localhost:9999/user/Johnny/profile
+Showing profile for user 'Johnny'.
+$ curl localhost:9999/file/in/the/cupboard/v1
+Showing revision 1 of file 'in/the/cupboard'.
+```
+
+
+### 3.2 Request Headers
+
+All request headers are available under `$args['header']`. This
+includes custom headers:
+
+
+```php
+class MyToken extends MyName {
+	public function my_token($args) {
+		if (!isset($args['header']['my_token']))
+			die("No token sent.");
+		die(sprintf("Your token is '%s'.",
+			$args['header']['my_token']));
+	}
+}
+
+$core = new MyToken();
+$core->route('/token', [$core, 'my_token']);
+```
+
+which will produce:
+
+```bash
+$ curl -H "My-Token: somerandomstring" localhost:9999/token
+Your token is 'somerandomstring'.
+```
+
+**NOTE:** Custom request header keys will always be received in
+lower case, with all '-' changed into '\_'.
+
+### 3.3 Response Headers
+
+You can send all kinds of response headers easily with the method
+`Header::header` from the parent class:
+
+```php
+use BFITech\ZapCore\Header;
+use BFITech\ZapCore\Router;
+
+class MyName extends Router {
+	public function my_response($args) {
+		if (isset($args['get']['name']))
+			Header::header(sprintf("X-Name: %s",
+				$args['get']['name']));
+	}
+}
+
+$core = new MyName();
+$core->route('/response', [$core, 'my_response']);
+```
+
+which will produce:
+
+```bash
+$ curl -si localhost:9999/response?name=Johnny | grep -i name
+X-Name: Johnny
+```
+
+For a more proper sequence of response headers, you can use
+`Header::start_header` method:
+
+```php
+class MyName extends Router {
+	public function my_response($args) {
+		if (isset($args['get']['name']))
+			Header::start_header(200);
+		else
+			Header::start_header(404);
+	}
+}
+
+$core = new MyName();
+$core->route('/response', [$core, 'my_response']);
+```
+
+which will produce:
+
+```bash
+$ curl -si localhost:9999/response?name=Johnny | head -n1
+HTTP/1.1 200 OK
+$ curl -si localhost:9999/response | head -n1
+HTTP/1.1 404 Not Found
+```
+
+### 3.4 Special Responses
+
+There are wrappers specifically-tailored for error pages, redirect and
+static file serving:
+
+```php
+class MyFile extends Router {
+	public function my_file($args) {
+		if (!isset($args['get']['name']))
+			// show a 403 immediately
+			return $this->abort(403);
+		$name = $args['get']['name'];
+		if ($name == 'John')
+			// redirect to another query string
+			return $this->redirect('?name=Johnny');
+		// a dummy file
+		file_put_contents('Johnny.txt', "I'm Johnny.\n");
+		// serve a static file, will call $this->abort(404)
+		// internally if the file is not found
+		$file_name = $name . '.txt';
+		$this->static_file($file_name);
+	}
+}
+
+$core = new MyFile();
+$core->route('/file', [$core, 'my_file']);
+```
+
+which will produce:
+
+```bash
+$ curl -siL localhost:9999/file | grep HTTP
+HTTP/1.1 403 Forbidden
+$ curl -siL localhost:9999/file?name=Jack | grep HTTP
+HTTP/1.1 404 Not Found
+$ curl -siL localhost:9999/file?name=John | grep HTTP
+HTTP/1.1 301 Moved Permanently
+HTTP/1.1 200 OK
+$ curl -L localhost:9999/file?name=Johnny
+I'm Johnny.
+```
+
+## 4. Contribution
+
+Found a bug? Help us fix it.
 
 0.  Fork from Github web interface.
 
@@ -100,15 +397,16 @@ $ x-www-browser http://localhost:9999
     available with:
 
     ```bash
+    $ phpunit
     $ x-www-browser docs/coverage/index.html
     ```
 
-5. Submit a Pull Request.
+5. Push to your fork and submit a Pull Request.
 
-## 4. Documentation
+## 5. Documentation
 
 If you have [Doxygen](http://www.stack.nl/~dimitri/doxygen/) installed,
-generated documentation is available with:
+detailed generated documentation is available with:
 
 ```bash
 $ doxygen
