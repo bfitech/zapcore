@@ -75,14 +75,13 @@ Here's a simple route with `/hello` path, a regular function as the
 callback to handle the request data, applied to `PUT` request method.
 
 ```php
-$core = new Router();
-
 function my_callback($args) {
-	global $core;
 	$name = $args['put'];
 	file_put_contents('name.txt', $name);
 	die(sprintf("Hello, %s.", $name));
 }
+
+$core = new Router();
 
 $core->route('/hello', 'my_callback', 'PUT');
 ```
@@ -115,8 +114,8 @@ function my_callback($args) {
 $core->route('/hello', 'my_callback', ['PUT', 'POST']);
 ```
 
-Instead of using global, we can use closure for the
-callback:
+Instead of letting globals floating around, we can use closure and
+inherited variable for the callback:
 
 ```php
 function my_callback($args, $core) {
@@ -197,32 +196,44 @@ default 404 error page will be sent unless you set `shutdown`
 parameter to `false` in the constructor.
 
 ```bash
-$ curl -si http://localhost/hello | head -n1
+$ curl -si http://localhost:9999/hello | head -n1
 HTTP/1.1 404 Not Found
 ```
 
 ### 3.1 Dynamic Path
 
-Apart from static path of the form `/path/to/some/where`, there
-are also two types of construct which will make a dynamic path:
+Apart from static path of the form `/path/to/some/where`, there are
+also two types of dynamic path built with enclosing pairs of symbols
+`'<>'` and `'{}'` that will capture matching strings from request URI
+and store them under `$args['params']`:
 
 ```php
 class MyPath extends Router {
 	public function my_short_param($args) {
 		printf("Showing profile for user '%s'.\n",
-			$args['params']['short_name']);
+			$args['params']['short']);
 	}
 	public function my_long_param($args) {
-		printf("Showing revision 1 of file '%s'.\n",
-			$args['params']['long_name']);
+		printf("Showing version 1 of file '%s'.\n",
+			$args['params']['long']);
+	}
+	public function my_compound_param($args) {
+		extract($args['params']);
+		printf("Showing revision %s of file '%s'.\n",
+			$short, $long);
 	}
 }
 
 $core = new MyPath();
-// short parameter with '<>'
-$core->route('/user/<short_name>/profile',  [$core, 'my_short_param']);
-// long parameter with '{}'
-$core->route('/file/{long_name}/v1',        [$core, 'my_long_param']);
+
+// short parameter with '<>', no slash captured
+$core->route('/user/<short>/profile', [$core, 'my_short_param']);
+
+// long parameter with '{}', slashes captured
+$core->route('/file/{long}/v1',       [$core, 'my_long_param']);
+
+// short and long parameters combined
+$core->route('/rev/{long}/v/<short>', [$core, 'my_compound_param']);
 ```
 
 which will produce:
@@ -231,14 +242,15 @@ which will produce:
 $ curl localhost:9999/user/Johnny/profile
 Showing profile for user 'Johnny'.
 $ curl localhost:9999/file/in/the/cupboard/v1
-Showing revision 1 of file 'in/the/cupboard'.
+Showing version 1 of file 'in/the/cupboard'.
+$ curl localhost:9999/rev/in/the/cupboard/v/3
+Showing revision 3 of file 'in/the/cupboard'.
 ```
-
 
 ### 3.2 Request Headers
 
-All request headers are available under `$args['header']`. This
-includes custom headers:
+All request headers are available under `$args['header']`. These
+include custom headers:
 
 
 ```php
@@ -267,18 +279,16 @@ lower case, with all '-' changed into '\_'.
 
 ### 3.3 Response Headers
 
-You can send all kinds of response headers easily with the method
-`Header::header` from the parent class:
+You can send all kinds of response headers easily with the static
+method `Header::header` from the parent class:
 
 ```php
-use BFITech\ZapCore\Header;
-use BFITech\ZapCore\Router;
-
 class MyName extends Router {
 	public function my_response($args) {
-		if (isset($args['get']['name']))
-			Header::header(sprintf("X-Name: %s",
-				$args['get']['name']));
+		if (!isset($args['get']['name']))
+			self::halt("Oh noe!");
+		self:header(sprintf("X-Name: %s",
+			$args['get']['name']));
 	}
 }
 
@@ -294,15 +304,15 @@ X-Name: Johnny
 ```
 
 For a more proper sequence of response headers, you can use
-`Header::start_header` method:
+`Header::start_header` static method:
 
 ```php
 class MyName extends Router {
 	public function my_response($args) {
 		if (isset($args['get']['name']))
-			Header::start_header(200);
+			self::start_header(200);
 		else
-			Header::start_header(404);
+			self::start_header(404);
 	}
 }
 
@@ -335,7 +345,8 @@ class MyFile extends Router {
 			// redirect to another query string
 			return $this->redirect('?name=Johnny');
 		// a dummy file
-		file_put_contents('Johnny.txt', "I'm Johnny.\n");
+		if (!file_exists('Johnny.txt'))
+			file_put_contents('Johnny.txt', "Here's Johnny.\n");
 		// serve a static file, will call $this->abort(404)
 		// internally if the file is not found
 		$file_name = $name . '.txt';
@@ -349,7 +360,7 @@ $core->route('/file', [$core, 'my_file']);
 
 which will produce:
 
-```bash
+```txt
 $ curl -siL localhost:9999/file | grep HTTP
 HTTP/1.1 403 Forbidden
 $ curl -siL localhost:9999/file?name=Jack | grep HTTP
@@ -358,7 +369,7 @@ $ curl -siL localhost:9999/file?name=John | grep HTTP
 HTTP/1.1 301 Moved Permanently
 HTTP/1.1 200 OK
 $ curl -L localhost:9999/file?name=Johnny
-I'm Johnny.
+Here's Johnny.
 ```
 
 ## 4. Contribution
