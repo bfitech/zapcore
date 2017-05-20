@@ -65,6 +65,20 @@ class Logger {
 	}
 
 	/**
+	 * Write lines as single line, with tab, CR and LF written
+	 * symbolically.
+	 */
+	private function one_line($msg) {
+		$msg = trim($msg);
+		$msg = str_replace([
+			"\t", "\n", "\r",
+		], [
+			" ", '\n', '\r',
+		], $msg);
+		return preg_replace('! +!', ' ', $msg);
+	}
+
+	/**
 	 * Enable writing.
 	 *
 	 * Use this to re-enable logging after temporary deactivation.
@@ -92,6 +106,7 @@ class Logger {
 			return;
 		$timestamp = gmdate(\DateTime::ATOM);
 		try {
+			$msg = $this->one_line($msg);
 			$line = $this->format($timestamp, $level, $msg);
 			fwrite($this->handle, $line);
 		} catch(\Exception $e) {}
