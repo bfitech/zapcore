@@ -169,7 +169,7 @@ class Router extends Header {
 
 		# remove script name, won't take effect when run from CLI
 		# and script name is /usr/local/bin/php or the like
-		if ($this->home != '/' && strpos($rpath, $this->home === 0))
+		if ($this->home != '/' && strpos($rpath, $this->home) === 0)
 			$rpath = substr($rpath, strlen($this->home));
 
 		# trim slashes
