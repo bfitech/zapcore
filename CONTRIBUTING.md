@@ -110,14 +110,14 @@ as the reference. These following exceptions and additions apply:
     whitespaces at the end of a line. Add at least 1 LF at the end of a
     file.
 
-4.  Commit messages are max 50 characters of good imperative English
-    sentence on the first line, and max 72 characters on subsequent
+4.  Commit messages are 50 characters max of good imperative English
+    sentence on the first line, and 72 characters max on subsequent
     lines, e.g.:
 
     ```txt
     Fix path parser.
 
-    Long parameters in path parser was known to break when a non-slash
+    Long parameters in path parser were known to break when a non-slash
     character precedes open curly braces.
     ```
 

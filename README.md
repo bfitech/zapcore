@@ -7,7 +7,7 @@ A very simple PHP router and other utilities.
 [![Latest Stable Version](https://poser.pugx.org/bfitech/zapcore/v/stable)](https://packagist.org/packages/bfitech/zapcore)
 [![Latest Unstable Version](https://poser.pugx.org/bfitech/zapcore/v/unstable)](https://packagist.org/packages/bfitech/zapcore)
 [![Build Status](https://travis-ci.org/bfitech/zapcore.svg?branch=master)](https://travis-ci.org/bfitech/zapcore)
-[![Codecov](https://codecov.io/gh/bfitech/zapcore/branch/master/graph/badge.svg)](https://codecov.io/gh/bfitech/zapcore)
+[![Code Coverage](https://codecov.io/gh/bfitech/zapcore/branch/master/graph/badge.svg)](https://codecov.io/gh/bfitech/zapcore)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/bfitech/zapcore/master/LICENSE)
 
 ----
@@ -393,12 +393,12 @@ Available configuration items are:
     no longer reliable, e.g. when you deploy your application
     under Apache `Alias` or Nginx `location` directives; or when you
     make it world-visible after a reverse-proxying. This is where
-    `home` and `host` manual setup come to the rescue.
+    `home` and `host` manual setup comes to the rescue.
 
     ```txt
     # your nginx configuration
     location @app {
-            set $app_dir /var/www/myapp;
+            set             $app_dir /var/www/myapp;
             fastcgi_pass    unix:/var/run/php5-fpm.sock;
             fastcgi_index   index.php;
             fastcgi_buffers 256 4k;
@@ -444,8 +444,8 @@ Available configuration items are:
     $core2->route('/usr/login', ...);
     $core2->route('/usr/logout', ...);
 
-    // $core2 is the one responsible to print a 404 page when there's
-    // no matching route.
+    // $core2 is the one responsible to internally call abort(404) at
+    // the end of script execution when there's no matching route found.
     ```
 
 -   `logger`
