@@ -66,7 +66,7 @@ as the reference. These following exceptions and additions apply:
             parent::__construct();
         }
         $this->param2 = $param2 < $param3 || $param2 > $param4
-            ? $param3 : $param4;
+            ? $param3 : $param2;
         $this->param5 = $param5;
     }
 

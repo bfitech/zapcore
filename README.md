@@ -372,6 +372,105 @@ $ curl -L localhost:9999/file?name=Johnny
 Here's Johnny.
 ```
 
+### 3.5 Advanced
+
+`Router::config` is a special method to finetune the router behavior,
+e.g.:
+
+```php
+$core = (new Router())
+    ->config('shutdown', false)
+    ->config('logger', new Logger());
+```
+Available configuration items are:
+
+-   `home` and `host`
+
+    `Router` attempts to infer your application root path from
+    `$_SERVER['SCRIPT_NAME']` which is mostly accurate when you
+    deploy your application via Apache `mod_php` with `mod_rewrite`
+    enabled. This most likely fails when `$_SERVER['SCRIPT_NAME']` is
+    no longer reliable, e.g. when you deploy your application
+    under Apache `Alias` or Nginx `location` directives; or when you
+    make it world-visible after a reverse-proxying. This is where
+    `home` and `host` manual setup come to the rescue.
+
+    ```txt
+    # your nginx configuration
+    location @app {
+            set $app_dir /var/www/myapp;
+            fastcgi_pass    unix:/var/run/php5-fpm.sock;
+            fastcgi_index   index.php;
+            fastcgi_buffers 256 4k;
+            include         fastcgi_params;
+            fastcgi_param   SCRIPT_FILENAME $app_dir/index.php;
+            # an inaccurate setting of SCRIPT_NAME
+            fastcgi_param   SCRIPT_NAME index.php;
+    }
+    location /app {
+            try_files $uri @app;
+    }
+    ```
+
+    ```php
+    # your index.php
+    $core = (new Router())
+        ->config('home', '/app')
+        ->config('host', 'https://example.org/app');
+
+    // No matter where you put your app in the filesystem, it should
+    // only be world-visible via https://example.org/app.
+    ```
+
+-   `shutdown`
+
+    `zapcore` allows more than one `Router` instances in a single file.
+    However, each instance executes a series of methods on shutdown if
+    there is no matched route to ensure the routing doesn't end up in a
+    blank page. In a multiple router situation, set `shutdown` config
+    to false except for the last `Router` instance.
+
+    ```php
+    $core1 = new Router();
+    $core1->config('shutdown', false);
+    $core1->route('/page', ...);
+    $core1->route('/post', ...);
+
+    $core2 = new Router();
+    $core2->route('/post', ...); # this route will never be executed,
+                                 # see above
+    $core2->route('/usr', ...);
+    $core2->route('/usr/profile', ...);
+    $core2->route('/usr/login', ...);
+    $core2->route('/usr/logout', ...);
+
+    // $core2 is the one responsible to print a 404 page when there's
+    // no matching route.
+    ```
+
+-   `logger`
+
+    All `zap*` packages use the same logging service provided by
+    `Logger` class. By default, each `Router` instance has its own
+    `Logger` instance, but you can share instance between `Router`s to
+    avoid multiple log files.
+
+    ```php
+    $logger = new Logger(Logger::DEBUG, '/tmp/myapp.log');
+
+    $core1 = (new Router())
+        ->config('logger', $logger);
+
+    $core2 = (new Router())
+        ->config('logger', $logger);
+
+    // Both $core1 and $core2 write to the same log file /tmp/myapp.log.
+    ```
+
+**NOTE**: All configuration items above are available as constructor
+parameters, but they are deprecated in favor of using `Router::config`
+method.
+
 ## 4. Contributing
 
 See CONTRIBUTING.md.
