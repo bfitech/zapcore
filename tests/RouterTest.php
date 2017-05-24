@@ -77,28 +77,13 @@ class RouterTest extends TestCase {
 	}
 
 	public function test_constructor() {
-		global $argv;
 
+		# Override autodetect since we're on the CLI.
 		$core = (new RouterDev())
-			->config('shutdown', false)
-			->config('logger', self::$logger)
-			->init();
-
-		# On CLI, Router::get_home() will resolve to the calling
-		# script, which in this case, phpunit script.
-		$home = $core->get_home();
-		$this->assertEquals(
-			rtrim($home, '/'), dirname($argv[0]));
-
-		# On CLI, Router::get_host() is meaningless and request parser
-		# will just assign 'http://localhost'.
-		$this->assertEquals(
-			$core->get_host(), "http://localhost${home}");
-
-		# Override autodetect.
-		$core->deinit()
 			->config('home', '/')
 			->config('host', 'http://localhost')
+			->config('shutdown', false)
+			->config('logger', self::$logger)
 			->config('wut', null)
 			->init();
 		$this->assertEquals($core->get_home(), '/');
@@ -114,6 +99,7 @@ class RouterTest extends TestCase {
 		->route('/x/<x>', function($args){
 			echo $args['params']['x'];
 		}, 'POST')
+		->config('eh', 'lol') # config or init here has no effect
 		->route('/x/<x>', function($args){
 			# matching the same route twice only affects the first one
 			echo $args['params']['x'];

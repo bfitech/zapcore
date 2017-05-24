@@ -107,6 +107,9 @@ class Router extends Header {
 	 * are considerably verbose.
 	 */
 	final public function deinit() {
+		$this->home = null;
+		$this->host = null;
+
 		$this->request_path = null;
 		$this->request_comp = [];
 
@@ -120,43 +123,71 @@ class Router extends Header {
 	}
 
 	/**
+	 * Autodetect home.
+	 *
+	 * Naive home detection. Works on standard mod_php or mod_fcgid
+	 * setup. Fails miserably when Alias directive or mod_proxy is
+	 * involved, in which case, manual config should be used.
+	 */
+	private function autodetect_home() {
+		if ($this->home !== null)
+			return;
+		$home = dirname($_SERVER['SCRIPT_NAME']);
+		// @codeCoverageIgnoreStart
+		if ($home === '.')
+			# CLI quirks
+			$home = '/';
+		if ($home[0] != '/')
+			# CLI quirks
+			$home = '/' . $home;
+		// @codeCoverageIgnoreEnd
+		if ($home != '/')
+			$home = rtrim($home, '/');
+		$this->home = $home;
+	}
+
+	/**
+	 * Autodetect host.
+	 *
+	 * Naive host detection. This relies on super-global $_SERVER
+	 * variable which varies from one web server to another, and
+	 * especially inaccurate when aliasing or reverse-proxying is
+	 * involved, in which case, manual config should be used.
+	 */
+	private function autodetect_host() {
+		if ($this->host !== null)
+			return;
+		$proto = isset($_SERVER['HTTPS']) && !empty($_SERVER['HTTPS'])
+			? 'https://' : 'http://';
+		$host = isset($_SERVER['SERVER_NAME'])
+			? $_SERVER['HTTP_HOST'] : 'localhost';
+		$port = isset($_SERVER['SERVER_PORT'])
+			? @(int)$_SERVER['SERVER_PORT'] : null;
+		// @codeCoverageIgnoreStart
+		if ($port) {
+			$port = intval($port);
+			if ($port === 0 || $port < 0 || $port > pow(2, 16))
+				$port = null;
+			if ($port == 80 && $proto == 'http')
+				$port = null;
+			if ($port == 443 && $proto == 'https')
+				$port = null;
+		}
+		if ($port && (strpos($host, ':') === false))
+			$host .= ':' . $port;
+		// @codeCoverageIgnoreEnd
+		$host = $proto . $host . $this->home;
+		$this->host = $host;
+	}
+
+	/**
 	 * Request parser.
 	 */
 	private function request_parse() {
 
-		if ($this->request_path)
-			return;
+		$this->autodetect_home();
 
-		if ($this->home === null) {
-			// @warning When run on CLI and script name becomes path to
-			// executing script, use $this->home to override
-			$home = dirname($_SERVER['SCRIPT_NAME']);
-			if ($home === '.')
-				# sometimes happens on CLI
-				$home = '/';
-			if ($home != '/')
-				$home = rtrim($home, '/'). '/';
-			$this->home = $home;
-		}
-
-		if ($this->host === null) {
-			$proto = isset($_SERVER['HTTPS']) && !empty($_SERVER['HTTPS'])
-				? 'https://' : 'http://';
-			$host = isset($_SERVER['SERVER_NAME'])
-				? $_SERVER['HTTP_HOST'] : 'localhost';
-			$port = isset($_SERVER['SERVER_PORT'])
-				? @(int)$_SERVER['SERVER_PORT'] : 80;
-			if ($port < 0 || $port > 65535)
-				$port = null;
-			if ($port == 80)
-				$port = null;
-			if ($port == 443 && $proto == 'https')
-				$port = null;
-			if ($port && strpos($host, ':') === false)
-				$host .= ':' . $port;
-			$host = $proto . $host . $this->home;
-			$this->host = $host;
-		}
+		$this->autodetect_host();
 
 		# initialize from request uri
 		$url = isset($_SERVER['REQUEST_URI'])
@@ -164,11 +195,6 @@ class Router extends Header {
 
 		# remove query string
 		$rpath = parse_url($url)['path'];
-
-		# remove script name, won't take effect when run from CLI
-		# and script name is /usr/local/bin/php or the like
-		if ($this->home != '/' && strpos($rpath, $this->home) === 0)
-			$rpath = substr($rpath, strlen($this->home));
 
 		# trim slashes
 		$rpath = trim($rpath, "/");
@@ -283,7 +309,7 @@ class Router extends Header {
 	 * @return object|mixed Router instance for easier chaining.
 	 */
 	final public function route(
-		string $path, $callback, $method='GET', $is_raw=null
+		$path, $callback, $method='GET', $is_raw=null
 	) {
 
 		# check if parser has been initialized
