@@ -11,7 +11,6 @@ class Router extends Header {
 
 	private $request_path = null;
 	private $request_comp = [];
-	private $request_routes = [];
 
 	private $home = null;
 	private $host = null;
@@ -110,7 +109,6 @@ class Router extends Header {
 	final public function deinit() {
 		$this->request_path = null;
 		$this->request_comp = [];
-		$this->request_routes = [];
 
 		$this->request_parsed = false;
 		$this->request_handled = false;
@@ -282,9 +280,10 @@ class Router extends Header {
 	 * @param bool $is_raw If true, accept raw data instead of parsed
 	 *     HTTP query. Only applicable for POST method. Useful in,
 	 *     e.g. JSON request body.
+	 * @return object|mixed Router instance for easier chaining.
 	 */
 	final public function route(
-		$path, $callback, $method='GET', $is_raw=null
+		string $path, $callback, $method='GET', $is_raw=null
 	) {
 
 		# check if parser has been initialized
@@ -292,14 +291,25 @@ class Router extends Header {
 
 		# request has been handled
 		if ($this->request_handled)
-			return;
+			return $this;
+
+		// verify path
+
+		if ($path[0] != '/') {
+			self::$logger->error(
+				"Router: path invalid in '$path'.");
+			return $this;
+		}
+		if ($path != '/')
+			# ignore trailing slash
+			$path = rtrim($path, '/');
 
 		// verify callback
 
 		if (!is_callable($callback)) {
 			self::$logger->error(
 				"Router: callback invalid in '$path'.");
-			return;
+			return $this;
 		}
 
 		// verify request method
@@ -324,18 +334,10 @@ class Router extends Header {
 				$this->method_collection[] = $m;
 		}
 		if (!in_array($request_method, $methods))
-			return;
+			return $this;
 
-		// verify path
+		// initialize router callback arguments
 
-		# path is empty
-		if (!$path || $path[0] != '/')
-			return;
-		# ignore trailing slash
-		if ($path != '/')
-			$path = rtrim($path, '/');
-
-		# init variables
 		$args = [];
 		$args['method'] = $request_method;
 		$args['params'] = [];
@@ -343,25 +345,19 @@ class Router extends Header {
 		if ($path != $this->request_path) {
 			$parser = $this->path_parser($path);
 			if (!$parser[1])
-				return;
+				return $this;
 			$pattern = '!^' . $parser[0] . '$!';
 			$matched = preg_match_all(
 				$pattern, $this->request_path,
 				$result, PREG_SET_ORDER);
 			if (!$matched)
-				return;
+				return $this;
 			unset($result[0][0]);
 			$args['params'] = array_combine(
 				$parser[1], $result[0]);
 		}
 
-		// collect method-path pair
-
-		$method_path = strtolower($request_method) . ':' . $path;
-		if (in_array($method_path, $this->request_routes))
-			# process method-path pair only once
-			return;
-		$this->request_routes[] = $method_path;
+		# we have a match at this point
 
 		// initialize HTTP variables
 
@@ -384,13 +380,13 @@ class Router extends Header {
 			}
 		}
 
-		// populate HTTP variables
+		// collect router callback arguments from HTTP variables
 
 		if (in_array($request_method, ['HEAD', 'GET', 'OPTIONS'])) {
 			# HEAD, GET, OPTIONS execute immediately
 			$this->request_handled = true;
 			$this->wrap_callback($callback, $args);
-			return;
+			return $this;
 		}
 		if ($request_method == 'POST') {
 			# POST, FILES
@@ -408,13 +404,18 @@ class Router extends Header {
 			self::$logger->warning(sprintf(
 				"Router: %s not supported in '%s'.",
 				$request_method, $this->request_path));
-			return $this->abort(405);
+			$this->abort(405);
+			# abort() can be patched so it doesn't always internally
+			# call die(). Let's keep the return value consistent.
+			return $this;
 		}
 
 		// execute callback
 
 		$this->request_handled = true;
 		$this->wrap_callback($callback, $args);
+
+		return $this;
 	}
 
 	/**
@@ -585,7 +586,7 @@ class Router extends Header {
 	 * Show host.
 	 */
 	public function get_host() {
-		return $this->host;
+		return str_replace([':443', ':80'], '', $this->host);
 	}
 
 	/**

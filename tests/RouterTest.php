@@ -81,6 +81,7 @@ class RouterTest extends TestCase {
 
 		$core = (new RouterDev())
 			->config('shutdown', false)
+			->config('logger', self::$logger)
 			->init();
 
 		# On CLI, Router::get_home() will resolve to the calling
@@ -102,6 +103,22 @@ class RouterTest extends TestCase {
 			->init();
 		$this->assertEquals($core->get_home(), '/');
 		$this->assertEquals($core->get_host(), 'http://localhost');
+		$core->deinit()->reset();
+
+		$_POST = ['a' => 1];
+		$_SERVER['REQUEST_URI'] = '/x/X';
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$core->route('a', function($args){
+			# invalid path is ignored
+		}, 'POST')
+		->route('/x/<x>', function($args){
+			echo $args['params']['x'];
+		}, 'POST')
+		->route('/x/<x>', function($args){
+			# matching the same route twice only affects the first one
+			echo $args['params']['x'];
+		}, 'POST');
+		$this->assertEquals($core::$body_raw, 'X');
 	}
 
 	public function test_path_parser() {
