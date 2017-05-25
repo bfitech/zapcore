@@ -37,37 +37,42 @@ class HeaderTest extends TestCase {
 	}
 
 	public function test_start_header() {
-		HeaderPatched::start_header(200, 3600);
-		$this->assertEquals(HeaderPatched::$code, 200);
-		$this->assertFalse($this->ele_starts_with(
-			HeaderPatched::$head, 'Pragma'));
+		$hdr = new HeaderPatched;
+		$header_string = $hdr::get_header_string(-1);
+		$this->assertEquals($header_string['code'], 404);
 
-		HeaderPatched::start_header(404, 0, [
+		$hdr::start_header(200, 3600);
+		$this->assertEquals($hdr::$code, 200);
+		$this->assertFalse($this->ele_starts_with(
+			$hdr::$head, 'Pragma'));
+
+		$hdr::start_header(404, 0, [
 			'X-Will-Work-For-Food: 1',
 		]);
-		$this->assertEquals(HeaderPatched::$code, 404);
+		$this->assertEquals($hdr::$code, 404);
 		$this->assertTrue($this->ele_starts_with(
-			HeaderPatched::$head, 'Pragma'));
+			$hdr::$head, 'Pragma'));
 	}
 
 	public function test_send_file() {
-		HeaderPatched::send_file(__FILE__, true,
+		$hdr = new HeaderPatched;
+		$hdr::send_file(__FILE__, true,
 			200, 0, [], 'X-Sendfile: ' . __FILE__);
-		$this->assertEquals(HeaderPatched::$code, 200);
+		$this->assertEquals($hdr::$code, 200);
 
 		ob_start();
-		HeaderPatched::send_file(__FILE__ . '.log', null,
+		$hdr::send_file(__FILE__ . '.log', null,
 			200, 0, [], [], function(){
 			echo __FILE__;
 		});
 		$rv = ob_get_clean();
-		$this->assertEquals(HeaderPatched::$code, 404);
+		$this->assertEquals($hdr::$code, 404);
 		$this->assertEquals($rv, __FILE__);
 
 		ob_start();
-		HeaderPatched::send_file(__FILE__);
+		$hdr::send_file(__FILE__);
 		$rv = ob_get_clean();
-		$this->assertEquals(HeaderPatched::$code, 200);
+		$this->assertEquals($hdr::$code, 200);
 		$this->assertEquals($rv, file_get_contents(__FILE__));
 	}
 
@@ -75,23 +80,24 @@ class HeaderTest extends TestCase {
 	 * @deprecated
 	 */
 	public function test_send_header() {
-		HeaderPatched::send_header(false, 3600, false);
+		$hdr = new HeaderPatched;
+		$hdr::send_header(false, 3600, false);
 		$this->assertTrue($this->ele_starts_with(
-			HeaderPatched::$head, 'Cache-Control'));
+			$hdr::$head, 'Cache-Control'));
 
-		HeaderPatched::send_header(false, 0, false);
+		$hdr::send_header(false, 0, false);
 		$this->assertTrue($this->ele_starts_with(
-			HeaderPatched::$head, 'Pragma'));
+			$hdr::$head, 'Pragma'));
 
 		ob_start();
-		HeaderPatched::send_header(
+		$hdr::send_header(
 			__FILE__, true, true, 302, 'test.php');
 		$rv = ob_get_clean();
 		$this->assertTrue($this->ele_starts_with(
-			HeaderPatched::$head, 'Expire'));
+			$hdr::$head, 'Expire'));
 
 		ob_start();
-		HeaderPatched::send_header(
+		$hdr::send_header(
 			__FILE__, true, true, 200, 'test.php');
 		$rv = ob_get_clean();
 		$this->assertEquals(
@@ -100,24 +106,25 @@ class HeaderTest extends TestCase {
 
 	public function test_print_json() {
 		ob_start();
-		HeaderPatched::print_json();
+		$hdr = new HeaderPatched;
+		$hdr::print_json();
 		extract(json_decode(ob_get_clean(), true));
 		$this->assertTrue($this->ele_starts_with(
-			HeaderPatched::$head, 'Content-Type: application/json'));
-		$this->assertEquals(HeaderPatched::$code, 200);
+			$hdr::$head, 'Content-Type: application/json'));
+		$this->assertEquals($hdr::$code, 200);
 		$this->assertEquals($errno, 0);
 		$this->assertSame($data, []);
 	}
 
 	public function test_pj() {
 		ob_start();
-		HeaderPatched::pj([1, null], 403);
+		$hdr = new HeaderPatched;
+		$hdr::pj([1, null], 403);
 		extract(json_decode(ob_get_clean(), true));
 		$this->assertTrue($this->ele_starts_with(
-			HeaderPatched::$head, 'Content-Type: application/json'));
-		$this->assertEquals(HeaderPatched::$code, 403);
+			$hdr::$head, 'Content-Type: application/json'));
+		$this->assertEquals($hdr::$code, 403);
 		$this->assertEquals($errno, 1);
 	}
-
 }
 

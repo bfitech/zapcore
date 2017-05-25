@@ -10,8 +10,7 @@ use BFITech\ZapCoreDev\RouterDev;
 /**
  * Class for testing defaults.
  *
- * This is to test default abort, static file handler
- * an redirects.
+ * This is to test default abort, static file serving and redirects.
  */
 class RouterDefault extends Router {
 	public static function header($header_string, $replace=false) {
@@ -76,7 +75,7 @@ class RouterTest extends TestCase {
 
 	}
 
-	public function test_constructor() {
+	public function test_route() {
 
 		# Override autodetect since we're on the CLI.
 		$core = (new RouterDev())
@@ -96,7 +95,8 @@ class RouterTest extends TestCase {
 		$core->route('a', function($args){
 			# invalid path is ignored
 		}, 'POST')
-		->route('/x/<x>', function($args){
+		->route('/x/<x>', function($args) use($core){
+			$this->assertEquals($core->get_request_path(), '/x/X');
 			echo $args['params']['x'];
 		}, 'POST')
 		->config('eh', 'lol') # config or init here has no effect
@@ -105,10 +105,20 @@ class RouterTest extends TestCase {
 			echo $args['params']['x'];
 		}, 'POST');
 		$this->assertEquals($core::$body_raw, 'X');
+		$core->deinit()->reset();
+
+		$_SERVER['REQUEST_URI'] = '/hello/john';
+		$core->route('/hey/<person>', function($args){
+			# compound path doesn't match
+		});
+		// @fixme RouterDev::abort_custom works as expected. It writes
+		// correctly to log if let to, yet, $core::$code is not updated.
+		// $this->assertEquals(404, $core::$code);
 	}
 
 	public function test_path_parser() {
-		$core = new RouterDev(null, null, false, self::$logger);
+		$core = (new RouterDev)
+			->config('logger', self::$logger);
 
 		# regular
 		$rv = $core->path_parser('/x/y/');

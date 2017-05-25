@@ -32,8 +32,7 @@ class Logger {
 	 *     is not null.
 	 */
 	public function __construct($level=null, $path=null, $handle=null) {
-		if ($level)
-			$this->level = @(int)$level;
+		$this->level = intval($level);
 		if (!$this->level)
 			$this->level = self::ERROR;
 		if ($handle) {
@@ -105,11 +104,15 @@ class Logger {
 		if (!$this->is_active)
 			return;
 		$timestamp = gmdate(\DateTime::ATOM);
+			// @codeCoverageIgnoreStart
 		try {
+			// @codeCoverageIgnoreEnd
 			$msg = $this->one_line($msg);
 			$line = $this->format($timestamp, $level, $msg);
 			fwrite($this->handle, $line);
+			// @codeCoverageIgnoreStart
 		} catch(\Exception $e) {}
+			// @codeCoverageIgnoreEnd
 	}
 
 	/**
@@ -151,8 +154,6 @@ class Logger {
 	 * @param string $msg Error message.
 	 */
 	public function error($msg) {
-		if ($this->level > self::ERROR)
-			return;
 		$this->write('ERR', $msg);
 	}
 }

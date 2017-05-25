@@ -96,6 +96,7 @@ class RouterDev extends Router {
 	 */
 	public function abort_custom($code) {
 		self::$code = $code;
+		static::$body_raw = "ERROR: $code";
 		self::$body = "ERROR: $code";
 		self::$errno = $code;
 		self::$data = [];

@@ -68,7 +68,7 @@ class Router extends Header {
 				$this->host = $val;
 				return $this;
 			case 'shutdown':
-				$this->auto_shutdown = $val;
+				$this->auto_shutdown = (bool)$val;
 				return $this;
 			case 'logger':
 				if ($val instanceof Logger) {
@@ -107,11 +107,12 @@ class Router extends Header {
 	 * are considerably verbose.
 	 */
 	final public function deinit() {
-		$this->home = null;
-		$this->host = null;
-
 		$this->request_path = null;
 		$this->request_comp = [];
+
+		$this->home = null;
+		$this->host = null;
+		$this->auto_shutdown = true;
 
 		$this->request_parsed = false;
 		$this->request_handled = false;
@@ -176,6 +177,7 @@ class Router extends Header {
 		if ($port && (strpos($host, ':') === false))
 			$host .= ':' . $port;
 		// @codeCoverageIgnoreEnd
+		$host = str_replace([':80', ':443'], '', $host);
 		$host = $proto . $host . $this->home;
 		$this->host = $host;
 	}
@@ -426,13 +428,15 @@ class Router extends Header {
 			$args[strtolower($request_method)] = file_get_contents(
 				"php://input");
 		} else {
-			# TRACE, CONNECT, etc. In case webserver haven't disabled them.
+			# TRACE, CONNECT, etc. In case webserver haven't disabled
+			# them.
 			self::$logger->warning(sprintf(
 				"Router: %s not supported in '%s'.",
 				$request_method, $this->request_path));
 			$this->abort(405);
-			# abort() can be patched so it doesn't always internally
-			# call die(). Let's keep the return value consistent.
+			# abort() and halt() can be patched so it doesn't always
+			# internally call die(). Let's keep the return value
+			# consistent.
 			return $this;
 		}
 
@@ -585,7 +589,7 @@ class Router extends Header {
 	/**
 	 * Shutdown function.
 	 *
-	 * If no request is handled at this point, show a 501.
+	 * If no request is handled at this point, show a 501 or 404.
 	 */
 	final public function shutdown() {
 		if ($this->request_handled)
@@ -593,7 +597,7 @@ class Router extends Header {
 		$code = 501;
 		if (in_array($this->current_method, $this->method_collection))
 			$code = 404;
-		self::$logger->warning(sprintf(
+		self::$logger->info(sprintf(
 			"Router: shutdown %s in %s '%s'.",
 			$code, $this->current_method, $this->request_path));
 		$this->abort($code);
@@ -612,7 +616,7 @@ class Router extends Header {
 	 * Show host.
 	 */
 	public function get_host() {
-		return str_replace([':443', ':80'], '', $this->host);
+		return $this->host;
 	}
 
 	/**
@@ -623,7 +627,7 @@ class Router extends Header {
 	}
 
 	/**
-	 * Show request path without leading slash.
+	 * Show request path.
 	 */
 	public function get_request_path() {
 		return $this->request_path;

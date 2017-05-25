@@ -3,6 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Common;
+use BFITech\ZapCore\CommonError;
 use BFITech\ZapCoreDev\CoreDev;
 
 
@@ -46,6 +47,12 @@ class RouterHTTPTest extends TestCase {
 	}
 
 	public function test_environment() {
+		try {
+			Common::http_client([]);
+		} catch(CommonError $e) {
+			# URL not set.
+		}
+
 		$this->assertEquals(
 			Common::http_client(self::$server_addr, 'HEAD')[0], 200);
 		$this->assertEquals(
@@ -56,7 +63,7 @@ class RouterHTTPTest extends TestCase {
 		$this->assertEquals($ret[1], 'Hello Friend');
 
 		$ret = self::client(self::$server_addr . '/', 'POST',
-			[], [], [], [], true);
+			['Authorization: Basic noop'], [], [], [], true);
 		$this->assertEquals($ret[0], 200);
 		$data = $ret[1]['data'];
 		$this->assertEquals($data['home'], '/');

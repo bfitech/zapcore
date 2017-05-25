@@ -22,6 +22,18 @@ class LoggerTest extends TestCase {
 		return false;
 	}
 
+	public function test_constructor() {
+		$fl = getcwd() . '/zapcore-logger-test-00.log';
+		self::$flogs[] = $fl;
+
+		$logger = new Logger('a', $fl);
+		$logger->error("XDEFAULTLEVEL");
+		$this->assertTrue($this->str_in_file($fl, 'XDEFAULTLEVEL'));
+
+		$logger->warning("XWARNING");
+		$this->assertTrue(!$this->str_in_file($fl, 'XWARNING'));
+	}
+
 	public function test_logger_write() {
 		$fl = getcwd() . '/zapcore-logger-test-01.log';
 		self::$flogs[] = $fl;
@@ -98,5 +110,5 @@ class LoggerTest extends TestCase {
 		$logger->info("X03");
 		$this->assertTrue($this->str_in_file($fl, 'X03'));
 	}
-
 }
+

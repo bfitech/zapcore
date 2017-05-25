@@ -5,24 +5,45 @@ use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Common;
 
 
+/**
+ * Common utilities tests.
+ *
+ * @requires OS Linux
+ * @todo Support OSes other than Linux.
+ */
 class CoreTest extends TestCase {
 
+	private function bail($msg) {
+		echo "ERROR: $msg\n";
+		exit(1);
+	}
+
 	public function test_mime() {
-		if (file_exists('/bin/bash'))
+		if (!function_exists('exec'))
+			$this->bail("'exec' is disabled.");
+
+		if (file_exists('/bin/bash')) {
 			$this->assertEquals(
 				Common::exec("echo hello")[0], "hello");
+			$this->assertEquals(
+				Common::exec("bash -c uwotm8 2>/dev/null")[0], "");
+		} else {
+			$this->bail("/bin/bash not available.");
+		}
+
+		$filebin = Common::exec("bash -c 'type -p file'")[0];
 
 		foreach ([
-			'xtest.htm' => ['text/html; charset=utf-8'],
-			'xtest.HTML' => ['text/html; charset=utf-8'],
-			'xtest.css' => ['text/css'],
-			'xtest.json' => ['application/json'],
+			'xtest.htm'    => ['text/html; charset=utf-8'],
+			'xtest.HTML'   => ['text/html; charset=utf-8'],
+			'xtest.css'    => ['text/css'],
+			'xtest.json'   => ['application/json'],
 			'xtest.min.js' => ['application/javascript'],
-			'xtest.pdf' => [
+			'xtest.pdf'    => [
 				'application/pdf',
 				pack('H*', "255044462d312e340a25"),
 			],
-			'xtest.dat' => [
+			'xtest.dat'    => [
 				'application/octet-stream',
 				pack('H*', "F00F00F00F00F00F00F0")
 			],
@@ -32,18 +53,29 @@ class CoreTest extends TestCase {
 			$fname = "/tmp/zapcore-test-$fbase";
 			$content = isset($fmime[1]) ? $fmime[1] : " ";
 			file_put_contents($fname, $content);
+
+			# auto
 			$rmime = Common::get_mimetype($fname);
 			$this->assertSame(strpos($rmime, $fmime[0]), 0);
+			# with `file`
+			if ($filebin) {
+				$rmime = Common::get_mimetype($fname, $filebin);
+				$this->assertSame(strpos($rmime, $fmime[0]), 0);
+			}
+
 			# last $fname is used by the next block
 			if ($fbase != 'xtest.dat')
 				unlink($fname);
 		}
+
 		if (file_exists($fname)) {
-			# use bogus `file`, in this case, PHP interpreter
-			Common::get_mimetype($fname, PHP_BINARY);
-			$this->assertEquals(
-				Common::get_mimetype($fname),
-				'application/octet-stream');
+			# use bogus `file`, in this case, `nologin`
+			Common::get_mimetype($fname, 'nologin');
+			$this->assertSame(0,
+				strpos(
+					Common::get_mimetype($fname),
+					'application/octet-stream')
+				);
 			unlink($fname);
 		}
 

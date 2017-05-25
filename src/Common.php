@@ -69,15 +69,21 @@ class Common {
 
 		# with `file`
 		$cmd = '%s -bip %s';
-		$bin = 'file';
-		if ($path_to_file && is_executable($path_to_file))
+		if ($path_to_file && is_executable($path_to_file)) {
 			$bin = $path_to_file;
+		} elseif (!($bin = self::exec("bash -c 'type -p file'")[0])) {
+			// @codeCoverageIgnoreStart
+			return 'application/octet-stream';
+			// @codeCoverageIgnoreEnd
+		}
 		$mimes = self::exec($cmd, [$bin, $fname]);
-		if ($mimes && preg_match('!^[a-z0-9\-]/!', $mimes[0]))
+		if ($mimes && preg_match('!^[a-z0-9\-]+/!i', $mimes[0]))
 			return $mimes[0];
 
 		# giving up
+		// @codeCoverageIgnoreStart
 		return 'application/octet-stream';
+		// @codeCoverageIgnoreEnd
 	}
 
 

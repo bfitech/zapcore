@@ -74,7 +74,7 @@ class Header {
 	 *     `$code` is valid, 404 dict otherwise.
 	 */
 	final public static function get_header_string($code) {
-		if (self::$header_string[$code] === null)
+		if (!isset(self::$header_string[$code]))
 			$code = 404;
 		return [
 			'code' => $code,
@@ -290,8 +290,6 @@ class Header {
 	final public static function pj(
 		$retval, $forbidden_code=null, $cache=0
 	) {
-		if (count($retval) < 2)
-			$retval[] = [];
 		$http_code = 200;
 		if ($retval[0] !== 0) {
 			$http_code = 401;
