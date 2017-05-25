@@ -108,12 +108,20 @@ class RouterTest extends TestCase {
 		$core->deinit()->reset();
 
 		$_SERVER['REQUEST_URI'] = '/hello/john';
-		$core->route('/hey/<person>', function($args){
-			# compound path doesn't match
-		});
-		// @fixme RouterDev::abort_custom works as expected. It writes
-		// correctly to log if let to, yet, $core::$code is not updated.
-		// $this->assertEquals(404, $core::$code);
+		$_SERVER['REQUEST_METHOD'] = 'PATCH';
+		# compound path doesn't match
+		$core->route('/hey/<person>', function($args){});
+		# must call shutdown manually
+		$core->shutdown();
+		# PATCH is never registered in routes, hence 501
+		$this->assertEquals(501, $core::$code);
+		$core->deinit()->reset();
+
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$core->route('/hey/<person>', function($args){});
+		$core->shutdown();
+		# GET is registered but no route matches, hence 404
+		$this->assertEquals(404, $core::$code);
 	}
 
 	public function test_path_parser() {
@@ -133,7 +141,7 @@ class RouterTest extends TestCase {
 		$rv = $core->path_parser('/x/<v1>/y/{v2}/z');
 		$this->assertSame($rv[1], ['v1', 'v2']);
 
-		# @fixme This shouldn't happen. __(y{v2}) != __(y/{v2})
+		// @fixme This shouldn't happen. __(y{v2}) != __(y/{v2})
 		$rv = $core->path_parser('/x/<v1>/y{v2}/z');
 		$this->assertSame($rv[1], ['v1', 'v2']);
 
