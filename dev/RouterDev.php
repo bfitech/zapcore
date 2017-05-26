@@ -55,14 +55,19 @@ class RouterDev extends Router {
 
 	/**
 	 * Patched Header::send_cookie().
-	 *
-	 * @codeCoverageIgnore
 	 */
 	public static function send_cookie(
 		$name, $value='', $expire=0, $path='', $domain='',
 		$secure=false, $httponly=false
 	) {
-		// do nothing
+		if (!isset($_COOKIE))
+			$_COOKIE = [];
+		if ($expire > 0) {
+			$_COOKIE[$name] = $value;
+			return;
+		}
+		if (isset($_COOKIE[$name]))
+			unset($_COOKIE[$name]);
 	}
 
 	/**

@@ -72,7 +72,18 @@ class RouterTest extends TestCase {
 		$rv = ob_get_clean();
 		$this->assertEquals(
 			strpos($rv, file_get_contents(__FILE__)), false);
+	}
 
+	public function test_route_dev() {
+		$core = new RouterDev();
+
+		# test fake cookie
+		unset($_COOKIE);
+		$core::send_cookie('foo', 'bar', 30, '/');
+		$this->assertSame($_COOKIE['foo'], 'bar');
+		$core::send_cookie('foo', 'bar', -30, '/');
+		$this->assertFalse(isset($_COOKIE['foo']));
+		$this->assertTrue(is_array($_COOKIE));
 	}
 
 	public function test_route() {
