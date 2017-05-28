@@ -125,6 +125,16 @@ class HeaderTest extends TestCase {
 			$hdr::$head, 'Content-Type: application/json'));
 		$this->assertEquals($hdr::$code, 403);
 		$this->assertEquals($errno, 1);
+
+		ob_start();
+		# invalid first arg
+		$hdr::pj(1, 403);
+		extract(json_decode(ob_get_clean(), true));
+		$this->assertTrue($this->ele_starts_with(
+			$hdr::$head, 'Content-Type: application/json'));
+		# will send HTTP 500 regardless the forbidden code value
+		$this->assertEquals($hdr::$code, 500);
+		$this->assertEquals($errno, -1);
 	}
 }
 

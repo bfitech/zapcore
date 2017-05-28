@@ -145,6 +145,7 @@ class Header {
 	public static function start_header(
 		$code=200, $cache=0, $headers=[]
 	) {
+		$msg = 'OK';
 		extract(self::get_header_string($code));
 
 		$proto = isset($_SERVER['SERVER_PROTOCOL'])
@@ -282,20 +283,28 @@ class Header {
 	 * Even shorter JSON response formatter.
 	 *
 	 * @param array $retval Return value of typical Zap HTTP response.
+	 *     Invalid format will send 500 HTTP error.
 	 * @param int $forbidden_code If `$retval[0] == 0`, HTTP code is
 	 *     200. Otherwise it defaults to 401 which we can override with
 	 *     this parameter, e.g. 403.
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
+	 * @see Header::print_json.
 	 */
 	final public static function pj(
 		$retval, $forbidden_code=null, $cache=0
 	) {
 		$http_code = 200;
+		if (!is_array($retval)) {
+			$retval = [-1, null];
+			$forbidden_code = 500;
+		}
 		if ($retval[0] !== 0) {
 			$http_code = 401;
 			if ($forbidden_code)
 				$http_code = $forbidden_code;
 		}
+		if (!isset($retval[1]))
+			$retval[1] = null;
 		self::print_json($retval[0], $retval[1], $http_code, $cache);
 	}
 
