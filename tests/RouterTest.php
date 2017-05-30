@@ -37,6 +37,8 @@ class RouterTest extends TestCase {
 
 	private function make_router() {
 		return (new RouterDev())
+			->config('home', '/')
+			->config('host', 'http://localhost/')
 			->config('logger', self::$logger)
 			->init();
 	}
@@ -97,24 +99,26 @@ class RouterTest extends TestCase {
 			->config('wut', null)
 			->init();
 		$this->assertEquals($core->get_home(), '/');
-		$this->assertEquals($core->get_host(), 'http://localhost');
+		$this->assertEquals($core->get_host(), 'http://localhost/');
 		$core->deinit()->reset();
 
 		$_POST = ['a' => 1];
 		$_SERVER['REQUEST_URI'] = '/x/X';
 		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$core->route('a', function($args){
-			# invalid path is ignored
-		}, 'POST')
-		->route('/x/<x>', function($args) use($core){
-			$this->assertEquals($core->get_request_path(), '/x/X');
-			echo $args['params']['x'];
-		}, 'POST')
-		->config('eh', 'lol') # config or init here has no effect
-		->route('/x/<x>', function($args){
-			# matching the same route twice only affects the first one
-			echo $args['params']['x'];
-		}, 'POST');
+		$core
+			->config('home', '/')
+			->route('a', function($args){
+				# invalid path is ignored
+			}, 'POST')
+			->route('/x/<x>', function($args) use($core){
+				$this->assertEquals($core->get_request_path(), '/x/X');
+				echo $args['params']['x'];
+			}, 'POST')
+			->config('eh', 'lol') # config or init here has no effect
+			->route('/x/<x>', function($args){
+				# matching the same route twice only affects the first one
+				echo $args['params']['x'];
+			}, 'POST');
 		$this->assertEquals($core::$body_raw, 'X');
 		$core->deinit()->reset();
 
@@ -165,6 +169,53 @@ class RouterTest extends TestCase {
 		$rv = $core->path_parser('/x/<v1>/y/{v1}/z');
 		$this->assertSame($rv[0], []);
 		$this->assertSame($rv[1], []);
+	}
+
+	public function test_config() {
+		# autodect will always be broken since we're on the CLI
+		$core = (new RouterDev)
+			->config('home', '/demo/')
+			->config('host', 'https://localhost/demo');
+		$this->assertEquals($core->get_host(), 'https://localhost/demo/');
+
+		# invalid, home is array
+		$core->config('home', []);
+		$this->assertNotEquals($core->get_home(), []);
+		$this->assertEquals($core->get_home(), '/demo/');
+
+		# invalid, empty home
+		$core->config('home', '');
+		$this->assertNotEquals($core->get_home(), '');
+		$this->assertEquals($core->get_home(), '/demo/');
+
+		# invalid, null host
+		$core->config('host', null);
+		$this->assertEquals($core->get_host(), 'https://localhost/demo/');
+
+		# invalid, non-trailing host
+		$host = 'http://example.org/y/';
+		$core->config('host', $host);
+		$this->assertNotEquals($core->get_host(), $host);
+		$this->assertEquals($core->get_host(), 'https://localhost/demo/');
+
+		# valid host
+		$host = 'http://example.org/y/demo';
+		$core->config('host', $host);
+		# config will always enforce trailing slash
+		$this->assertEquals($core->get_host(), $host . '/');
+
+		# prefixed routing
+		$core = (new RouterDev)
+			->config('logger', self::$logger)
+			->config('home', '/begin');
+		$this->assertEquals('/begin/', $core->get_home());
+		$_SERVER['REQUEST_URI'] = '/begin/sleep?x=y&p=q#asdf';
+		$core->route('/sleep', function($args) use($core){
+			$this->assertEquals($core->get_request_path(), '/sleep');
+			echo "SLEEPING";
+		});
+		$this->assertEquals($core::$body_raw, "SLEEPING");
+		$core->deinit()->reset();
 	}
 
 	public function test_route_post() {

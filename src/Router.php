@@ -49,6 +49,35 @@ class Router extends Header {
 	}
 
 	/**
+	 * Home configuration validation.
+	 */
+	private function config_home($home) {
+		if (!is_string($home) || !$home || $home[0] != '/')
+			return;
+		$home = rtrim($home, '/') . '/';
+		$this->home = $home;
+	}
+
+	/**
+	 * Host configuration validation.
+	 */
+	private function config_host($host) {
+		if (filter_var($host, FILTER_VALIDATE_URL,
+				FILTER_FLAG_PATH_REQUIRED) === false)
+			return;
+		$host = rtrim($host, '/') . '/';
+		$home = $this->home;
+		if ($home == '/') {
+			$this->host = $host;
+			return;
+		}
+		# home must be at the end of host
+		if (substr($host, -strlen($home)) != $home)
+			return;
+		$this->host = $host;
+	}
+
+	/**
 	 * Configure.
 	 *
 	 * If using constructor is too verbose or cumbersome, use this to
@@ -62,10 +91,10 @@ class Router extends Header {
 			return $this;
 		switch ($key) {
 			case 'home':
-				$this->home = $val;
+				$this->config_home($val);
 				return $this;
 			case 'host':
-				$this->host = $val;
+				$this->config_host($val);
 				return $this;
 			case 'shutdown':
 				$this->auto_shutdown = (bool)$val;
@@ -144,6 +173,7 @@ class Router extends Header {
 		// @codeCoverageIgnoreEnd
 		if ($home != '/')
 			$home = rtrim($home, '/');
+		$home = rtrim($home, '/') . '/';
 		$this->home = $home;
 	}
 
@@ -197,6 +227,13 @@ class Router extends Header {
 
 		# remove query string
 		$rpath = parse_url($url)['path'];
+
+		# remove home
+		if ($rpath != '/') {
+			$rpath = substr($rpath, strlen($this->home) - 1);
+			if (!$rpath)
+				$rpath = '/';
+		}
 
 		# trim slashes
 		$rpath = trim($rpath, "/");
