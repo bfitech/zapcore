@@ -163,17 +163,8 @@ class Router extends Header {
 		if ($this->home !== null)
 			return;
 		$home = dirname($_SERVER['SCRIPT_NAME']);
-		// @codeCoverageIgnoreStart
-		if ($home === '.')
-			# CLI quirks
-			$home = '/';
-		if ($home[0] != '/')
-			# CLI quirks
-			$home = '/' . $home;
-		// @codeCoverageIgnoreEnd
-		if ($home != '/')
-			$home = rtrim($home, '/');
-		$home = rtrim($home, '/') . '/';
+		$home = !$home || $home[0] != '/'
+			? '/' : rtrim($home, '/') . '/';
 		$this->home = $home;
 	}
 
@@ -229,11 +220,8 @@ class Router extends Header {
 		$rpath = parse_url($url)['path'];
 
 		# remove home
-		if ($rpath != '/') {
+		if ($rpath != '/')
 			$rpath = substr($rpath, strlen($this->home) - 1);
-			if (!$rpath)
-				$rpath = '/';
-		}
 
 		# trim slashes
 		$rpath = trim($rpath, "/");
