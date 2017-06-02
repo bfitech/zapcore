@@ -13,12 +13,15 @@ use BFITech\ZapCoreDev\RouterDev;
  * This is to test default abort, static file serving and redirects.
  */
 class RouterDefault extends Router {
+
 	public static function header($header_string, $replace=false) {
 		RouterDev::header($header_string, $replace);
 	}
+
 	public static function halt($arg=null) {
 		RouterDev::halt($arg);
 	}
+
 }
 
 class RouterTest extends TestCase {
@@ -49,7 +52,8 @@ class RouterTest extends TestCase {
 		# abort 404
 		ob_start();
 		$core = new RouterDefault();
-		$core->route('/s', function(){});
+		$core->route('/s', function(){
+		});
 		$core->shutdown();
 		$rv = ob_get_clean();
 		$this->assertNotEquals(strpos($rv, '404'), false);
@@ -116,7 +120,7 @@ class RouterTest extends TestCase {
 			}, 'POST')
 			->config('eh', 'lol') # config or init here has no effect
 			->route('/x/<x>', function($args){
-				# matching the same route twice only affects the first one
+				# matching the same route twice only affects the first
 				echo $args['params']['x'];
 			}, 'POST');
 		$this->assertEquals($core::$body_raw, 'X');
@@ -125,7 +129,8 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/hello/john';
 		$_SERVER['REQUEST_METHOD'] = 'PATCH';
 		# compound path doesn't match
-		$core->route('/hey/<person>', function($args){});
+		$core->route('/hey/<person>', function($args){
+		});
 		# must call shutdown manually
 		$core->shutdown();
 		# PATCH is never registered in routes, hence 501
@@ -133,7 +138,8 @@ class RouterTest extends TestCase {
 		$core->deinit()->reset();
 
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$core->route('/hey/<person>', function($args){});
+		$core->route('/hey/<person>', function($args){
+		});
 		$core->shutdown();
 		# GET is registered but no route matches, hence 404
 		$this->assertEquals(404, $core::$code);
@@ -176,7 +182,8 @@ class RouterTest extends TestCase {
 		$core = (new RouterDev)
 			->config('home', '/demo/')
 			->config('host', 'https://localhost/demo');
-		$this->assertEquals($core->get_host(), 'https://localhost/demo/');
+		$this->assertEquals($core->get_host(),
+			'https://localhost/demo/');
 
 		# invalid, home is array
 		$core->config('home', []);
@@ -190,13 +197,15 @@ class RouterTest extends TestCase {
 
 		# invalid, null host
 		$core->config('host', null);
-		$this->assertEquals($core->get_host(), 'https://localhost/demo/');
+		$this->assertEquals($core->get_host(),
+			'https://localhost/demo/');
 
 		# invalid, non-trailing host
 		$host = 'http://example.org/y/';
 		$core->config('host', $host);
 		$this->assertNotEquals($core->get_host(), $host);
-		$this->assertEquals($core->get_host(), 'https://localhost/demo/');
+		$this->assertEquals($core->get_host(),
+			'https://localhost/demo/');
 
 		# valid host
 		$host = 'http://example.org/y/demo';
@@ -294,7 +303,8 @@ class RouterTest extends TestCase {
 		$_SERVER['REQUEST_URI'] = '/traceme/';
 
 		$core = $this->make_router();
-		$core->route('/traceme', function($args){}, 'TRACE');
+		$core->route('/traceme', function($args){
+		}, 'TRACE');
 		# regardless the request, TRACE will always give 405
 		$this->assertEquals($core::$code, 405);
 	}
@@ -307,7 +317,8 @@ class RouterTest extends TestCase {
 		$core = $this->make_router();
 		# without this top-level route, $core->shutdown()
 		# will end up with 501
-		$core->route('/', function($args){});
+		$core->route('/', function($args){
+		});
 		# must invoke shutdown manually since no path matches
 		$core->shutdown();
 		$this->assertEquals($core::$code, 404);
@@ -371,8 +382,8 @@ class RouterTest extends TestCase {
 		$core->route('/redirect', function($args) use($core) {
 			$core->redirect('/destination');
 		}, 'GET');
-		$this->assertTrue(in_array('Location: /destination', $core::$head));
+		$this->assertTrue(in_array('Location: /destination',
+			$core::$head));
 	}
 
 }
-

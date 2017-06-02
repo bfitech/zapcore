@@ -184,15 +184,14 @@ class Router extends Header {
 		$host = isset($_SERVER['SERVER_NAME'])
 			? $_SERVER['HTTP_HOST'] : 'localhost';
 		$port = isset($_SERVER['SERVER_PORT'])
-			? @(int)$_SERVER['SERVER_PORT'] : null;
+			? (int)$_SERVER['SERVER_PORT'] : null;
 		// @codeCoverageIgnoreStart
 		if ($port) {
-			$port = intval($port);
-			if ($port === 0 || $port < 0 || $port > pow(2, 16))
+			if ($port < 0 || $port > pow(2, 16))
 				$port = null;
-			if ($port == 80 && $proto == 'http')
+			elseif ($port == 80 && $proto == 'http')
 				$port = null;
-			if ($port == 443 && $proto == 'https')
+			elseif ($port == 443 && $proto == 'https')
 				$port = null;
 		}
 		if ($port && (strpos($host, ':') === false))
@@ -374,11 +373,9 @@ class Router extends Header {
 		$this->current_method = $request_method;
 
 		# always allow HEAD
-		if (!is_array($method)) {
-			$methods = [$method, 'HEAD'];
-		} else {
-			$methods = array_merge($method, ['HEAD']);
-		}
+		$methods = is_array($method)
+			? $methods = array_merge($method, ['HEAD'])
+			: $methods = [$method, 'HEAD'];
 		$methods = array_unique($methods);
 		# keep methods in collection for later deciding whether
 		# it's 404 or 501 on shutdown function
@@ -485,10 +482,11 @@ class Router extends Header {
 	<head>
 		<meta charset=utf-8>
 		<meta name=viewport
-			content='width=device-width, initial-scale=1.0, user-scalable=yes'>
+			content='width=device-width, initial-scale=1.0,
+				user-scalable=yes'>
 		<title>$code $msg</title>
 		<style>
-			body {background-color: #eee; font-family: sans;}
+			body {background-color: #eee; font-family: sans-serif;}
 			div  {background-color: #fff; border: 1px solid #ddd;
 				  padding: 25px; max-width:800px;
 				  margin:20vh auto 0 auto; text-align:center;}
@@ -540,10 +538,11 @@ class Router extends Header {
 	<head>
 		<meta charset='utf-8'/>
 		<meta name=viewport
-			content='width=device-width, initial-scale=1.0, user-scalable=yes'>
+			content='width=device-width, initial-scale=1.0,
+				user-scalable=yes'>
 		<title>$code $msg</title>
 		<style>
-			body {background-color: #eee; font-family: sans;}
+			body {background-color: #eee; font-family: sans-serif;}
 			div  {background-color: #fff; border: 1px solid #ddd;
 				  padding: 25px; max-width:800px;
 				  margin:20vh auto 0 auto; text-align:center;}
@@ -607,7 +606,8 @@ class Router extends Header {
 	) {
 		self::$logger->info("Router: static: '$path'.");
 		if (!method_exists($this, 'static_file_custom'))
-			return $this->static_file_default($path, $cache, $disposition);
+			return $this->static_file_default($path, $cache,
+				$disposition);
 		return $this->static_file_custom($path, $cache, $disposition);
 	}
 
@@ -677,4 +677,3 @@ class Router extends Header {
 	}
 
 }
-

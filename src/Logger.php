@@ -10,13 +10,13 @@ namespace BFITech\ZapCore;
 class Logger {
 
 	/** Debug log level constant. */
-	const DEBUG   = 0x10;
+	const DEBUG = 0x10;
 	/** Info log level constant. */
-	const INFO    = 0x20;
+	const INFO = 0x20;
 	/** Warning log level constant. */
 	const WARNING = 0x30;
 	/** Error log level constant. */
-	const ERROR   = 0x40;
+	const ERROR = 0x40;
 
 	private $level = self::ERROR;
 	private $path = null;
@@ -111,7 +111,8 @@ class Logger {
 			$line = $this->format($timestamp, $level, $msg);
 			fwrite($this->handle, $line);
 			// @codeCoverageIgnoreStart
-		} catch(\Exception $e) {}
+		} catch(\Exception $e) {
+		}
 			// @codeCoverageIgnoreEnd
 	}
 
@@ -156,5 +157,5 @@ class Logger {
 	public function error($msg) {
 		$this->write('ERR', $msg);
 	}
-}
 
+}

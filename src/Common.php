@@ -3,7 +3,9 @@
 
 namespace BFITech\ZapCore;
 
-class CommonError extends \Exception {}
+
+class CommonError extends \Exception {
+}
 
 
 /**
@@ -86,7 +88,6 @@ class Common {
 		// @codeCoverageIgnoreEnd
 	}
 
-
 	/**
 	 * cURL-based HTTP client.
 	 *
@@ -112,13 +113,16 @@ class Common {
 	 * @return array A list of the form [HTTP code, response body].
 	 *     HTTP code is -1 for invalid method, 0 for failing request,
 	 *     and any of standard code for successful request.
+	 *
+	 * @todo Only accept kwargs parameter in next minor release.
 	 */
 	final public static function http_client(
 		$url_or_kwargs, $method='GET', $headers=[], $get=[], $post=[],
 		$custom_opts=[], $expect_json=false, $is_raw=false
 	) {
-		if (is_array($url_or_kwargs)) {
-			extract(self::extract_kwargs($url_or_kwargs, [
+		$url = $url_or_kwargs;
+		if (is_array($url)) {
+			extract(self::extract_kwargs($url, [
 				'url' => null,
 				'method' => 'GET',
 				'headers'=> [],
@@ -128,8 +132,6 @@ class Common {
 				'expect_json' => false,
 				'is_raw' => false,
 			]));
-		} else {
-			$url = $url_or_kwargs;
 		}
 
 		if (!isset($url) || !$url)
@@ -198,7 +200,9 @@ class Common {
 	 *     and trim the values and drop keys of those with empty values.
 	 * @return bool|array False on failure, filtered dict otherwise.
 	 */
-	final public static function check_dict($array, $keys, $trim=false) {
+	final public static function check_dict(
+		$array, $keys, $trim=false
+	) {
 		$checked = [];
 		foreach ($keys as $key) {
 			if (!isset($array[$key]))
@@ -226,7 +230,9 @@ class Common {
 	 *     and trim the values and drop keys of those with empty values.
 	 * @return bool|array False on failure, filtered dict otherwise.
 	 */
-	final public static function check_idict($array, $keys, $trim=false) {
+	final public static function check_idict(
+		$array, $keys, $trim=false
+	) {
 		if (false === $array = self::check_dict($array, $keys, $trim))
 			return false;
 		foreach ($array as $val) {
@@ -248,7 +254,9 @@ class Common {
 	 *     is not complete, of the form: `key => default value`.
 	 * @return array A complete array ready to be extract()ed.
 	 */
-	final public static function extract_kwargs($input_array, $init_array) {
+	final public static function extract_kwargs(
+		$input_array, $init_array
+	) {
 		foreach (array_keys($init_array) as $key) {
 			if (isset($input_array[$key]))
 				$init_array[$key] = $input_array[$key];
@@ -257,4 +265,3 @@ class Common {
 	}
 
 }
-

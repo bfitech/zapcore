@@ -5,14 +5,14 @@ namespace BFITech\ZapCoreDev;
 
 use BFITech\ZapCore\Common;
 
-class CoreDevError extends \Exception {}
+class CoreDevError extends \Exception {
+}
 
 
 /**
  * CoreDev class.
  */
 class CoreDev {
-
 
 	/**
 	 * Start a test server.
@@ -24,7 +24,9 @@ class CoreDev {
 	 * @param int $port Server port.
 	 * @return int PID of server process.
 	 */
-	final public static function server_up($starting_point=null, $port=9999) {
+	final public static function server_up(
+		$starting_point=null, $port=9999
+	) {
 
 		if (!$starting_point) {
 			$dir = getcwd();
@@ -42,7 +44,7 @@ class CoreDev {
 		}
 
 		$port = (int)$port;
-		if ($port < 0  || $port > 65535)
+		if ($port < 0 || $port > 65535)
 			throw new CoreDevError(sprintf(
 				"Invalid port number: '%s'.", $port));
 
@@ -95,4 +97,3 @@ class CoreDev {
 	}
 
 }
-

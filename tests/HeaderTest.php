@@ -16,10 +16,12 @@ class HeaderPatched extends Header {
 		else
 			static::$head[] = $header_string;
 	}
+
 	public static function halt($str=null) {
 		if ($str)
 			echo $str;
 	}
+
 }
 
 
@@ -63,8 +65,8 @@ class HeaderTest extends TestCase {
 		ob_start();
 		$hdr::send_file(__FILE__ . '.log', null,
 			200, 0, [], [], function(){
-			echo __FILE__;
-		});
+				echo __FILE__;
+			});
 		$rv = ob_get_clean();
 		$this->assertEquals($hdr::$code, 404);
 		$this->assertEquals($rv, __FILE__);
@@ -136,5 +138,5 @@ class HeaderTest extends TestCase {
 		$this->assertEquals($hdr::$code, 500);
 		$this->assertEquals($errno, -1);
 	}
-}
 
+}

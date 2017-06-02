@@ -66,4 +66,3 @@ class CoreDevTest extends TestCase {
 	}
 
 }
-

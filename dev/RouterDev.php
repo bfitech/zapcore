@@ -137,4 +137,3 @@ class RouterDev extends Router {
 	}
 
 }
-

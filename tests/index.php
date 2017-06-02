@@ -15,10 +15,13 @@ $core->route('/', function($args) use($core) {
 
 # route errors
 $core
-	->route('/#', function($args){})
+	->route('/#', function($args){
+	})
 	->route('/xnocb', null)
-	->route('/xtrace', function($args){}, 'TRACE')
-	->route('/x1/<path>/x2/{path}', function($args){});
+	->route('/xtrace', function($args){
+	}, 'TRACE')
+	->route('/x1/<path>/x2/{path}', function($args){
+	});
 
 $core->route('/', function($args) use($core) {
 	$core->print_json(0, [
@@ -45,13 +48,13 @@ $core->route(
 	'/some/<var1>/other/<var2>/thing',
 	function($args) use($core) {
 		$core->print_json(0, $args);
-});
+	});
 
 $core->route(
 	'/some/{dir}/that/ends/with/<file>',
 	function($args) use($core) {
 		$core->print_json(0, $args);
-});
+	});
 
 $core->route('/some/thing', function($args) use($core){
 	extract($args['get']);
@@ -65,4 +68,3 @@ $core->route('/put/it/down', function($args) use($core){
 	$data = $args[strtolower($method)];
 	$core->print_json(0, [$method, $data]);
 }, ['PUT', 'POST']);
-

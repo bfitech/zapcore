@@ -193,5 +193,5 @@ class RouterHTTPTest extends TestCase {
 		]);
 		$this->assertEquals($ret[0], 501);
 	}
-}
 
+}

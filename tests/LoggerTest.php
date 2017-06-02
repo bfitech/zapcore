@@ -110,5 +110,5 @@ class LoggerTest extends TestCase {
 		$logger->info("X03");
 		$this->assertTrue($this->str_in_file($fl, 'X03'));
 	}
-}
 
+}
