@@ -309,40 +309,39 @@ class Router extends Header {
 	 */
 	private function execute_callback($callback, $args, $is_raw=null) {
 
-		if (in_array($this->request_method, [
-			'HEAD', 'GET', 'OPTIONS'])
-		) {
-			# HEAD, GET, OPTIONS execute immediately
-			$this->request_handled = true;
-			$this->wrap_callback($callback, $args);
-			return $this;
-		}
+		$method = strtolower($this->request_method);
 
-		if ($this->request_method == 'POST') {
-			# POST, FILES
+		if (in_array($method, ['head', 'get', 'options']))
+			return $this->finish_callback($callback, $args);
+
+		if ($method == 'post') {
 			$args['post'] = $is_raw ?
 				file_get_contents("php://input") : $_POST;
 			if (isset($_FILES) && !empty($_FILES))
 				$args['files'] = $_FILES;
-		} elseif (in_array($this->request_method, [
-			'PUT', 'DELETE', 'PATCH'
-		])) {
-			$args[strtolower($this->request_method)] =
-				file_get_contents("php://input");
-		} else {
-			# TRACE, CONNECT, etc. In case webserver haven't disabled
-			# them.
-			self::$logger->warning(sprintf(
-				"Router: %s not supported in '%s'.",
-				$this->request_method, $this->request_path));
-			$this->abort(405);
-			# abort() and halt() can be patched so it doesn't always
-			# internally call die(). Let's keep the return value
-			# consistent.
-			return $this;
+			return $this->finish_callback($callback, $args);
 		}
 
-		# execute callback
+		if (in_array($method, ['put', 'delete', 'patch'])) {
+			$args[$method] = file_get_contents("php://input");
+			return $this->finish_callback($callback, $args);
+		}
+
+		# TRACE, CONNECT, etc. is not supported, in case web server
+		# hasn't disabled them
+		self::$logger->warning(sprintf(
+			"Router: %s not supported in '%s'.",
+			$this->request_method, $this->request_path));
+		$this->abort(405);
+
+		# always return self for chaining even if aborted
+		return $this;
+	}
+
+	/**
+	 * Finish callback.
+	 */
+	private function finish_callback($callback, $args) {
 		$this->request_handled = true;
 		$this->wrap_callback($callback, $args);
 		return $this;
@@ -383,8 +382,7 @@ class Router extends Header {
 			')!',
 			$path, $tokens, PREG_OFFSET_CAPTURE);
 
-		$keys = [];
-		$symbols = [];
+		$keys = $symbols = [];
 		foreach ($tokens[0] as $t) {
 			$keys[] = str_replace(['{','}','<','>'], '', $t[0]);
 			$replacement = $valid_chars;
@@ -404,9 +402,8 @@ class Router extends Header {
 		while ($n < strlen($path)) {
 			$matched = false;
 			foreach ($symbols as $s) {
-				if ($n < $s[1]) {
+				if ($n < $s[1])
 					continue;
-				}
 				if ($n == $s[1]) {
 					$matched = true;
 					$pattern .= $s[0];
@@ -485,19 +482,19 @@ class Router extends Header {
 		if (false === $params = $this->parse_request_path($path))
 			return $this;
 
-		# we have a match at this point; start populating callback
-		# arguments
-		$args = [];
-		$args['method'] = $this->request_method;
-		$args['params'] = $params;
-		$args['get'] = $_GET;
-		$args['post'] = [];
-		$args['files'] = [];
-		$args['put'] = null;
-		$args['delete'] = null;
-		$args['patch'] = null;
-		$args['cookie'] = $_COOKIE;
-		$args['header'] = [];
+		# we have a match at this point; initialize callback args
+		$args = [
+			'method' => $this->request_method,
+			'params' => $params,
+			'get' => $_GET,
+			'post' => [],
+			'files' => [],
+			'put' => null,
+			'delete' => null,
+			'patch' => null,
+			'cookie' => $_COOKIE,
+			'header' => [],
+		];
 		# custom headers
 		foreach ($_SERVER as $key => $val) {
 			if (strpos($key, 'HTTP_') === 0) {
@@ -507,7 +504,7 @@ class Router extends Header {
 			}
 		}
 
-		# let the callback executes
+		# populate args and let the callback executes
 		return $this->execute_callback($callback, $args, $is_raw);
 	}
 

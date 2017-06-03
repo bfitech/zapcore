@@ -179,7 +179,8 @@ class Header {
 	 *
 	 * Using higher-level Route::static_file_default is enough for
 	 * standard usage. Wrap this in Route::static_file_custom to make
-	 * a more elaborate static file serving.
+	 * a more elaborate static file serving instead of calling it
+	 * directly.
 	 *
 	 * @param string $fpath Path to file.
 	 * @param mixed $disposition If set as string, this will be used
