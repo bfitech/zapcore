@@ -232,35 +232,6 @@ class Header {
 	}
 
 	/**
-	 * Send response headers and read a file if applicable.
-	 *
-	 * @deprecated Use start_header() and send_file() instead.
-	 *
-	 * @param string|false $fname Filename to read or false.
-	 * @param int|false $cache Cache age or no cache at all.
-	 * @param bool $echo If true and `$fname` exists, print it and die.
-	 * @param int $code HTTP code.
-	 * @param bool|string $disposition Whether Content-Disposition
-	 *     header is to be sent. If a string is set, it will be used
-	 *     in the header.
-	 * @param string $xsendfile_header Header containing xsendfile
-	 *     directive for Apache or the equivalent for other webservers.
-	 *     May be set externally with webserver internal directive.
-	 */
-	final public static function send_header(
-		$fname=false, $cache=false, $echo=true,
-		$code=200, $disposition=false, $xsendfile_header=null
-	) {
-
-		if ($fname)
-			return static::send_file($fname, $disposition,
-				$code, $cache, [], $xsendfile_header);
-		static::start_header($code, $cache);
-		if ($echo)
-			static::halt();
-	}
-
-	/**
 	 * Convenience method for JSON response.
 	 *
 	 * @param int $errno Error number to return.

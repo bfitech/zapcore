@@ -78,34 +78,6 @@ class HeaderTest extends TestCase {
 		$this->assertEquals($rv, file_get_contents(__FILE__));
 	}
 
-	/**
-	 * @deprecated
-	 */
-	public function test_send_header() {
-		$hdr = new HeaderPatched;
-		$hdr::send_header(false, 3600, false);
-		$this->assertTrue($this->ele_starts_with(
-			$hdr::$head, 'Cache-Control'));
-
-		$hdr::send_header(false, 0, false);
-		$this->assertTrue($this->ele_starts_with(
-			$hdr::$head, 'Pragma'));
-
-		ob_start();
-		$hdr::send_header(
-			__FILE__, true, true, 302, 'test.php');
-		$rv = ob_get_clean();
-		$this->assertTrue($this->ele_starts_with(
-			$hdr::$head, 'Expire'));
-
-		ob_start();
-		$hdr::send_header(
-			__FILE__, true, true, 200, 'test.php');
-		$rv = ob_get_clean();
-		$this->assertEquals(
-			$rv, file_get_contents(__FILE__));
-	}
-
 	public function test_print_json() {
 		ob_start();
 		$hdr = new HeaderPatched;

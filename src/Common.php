@@ -47,8 +47,7 @@ class Common {
 		if (isset($pi['extension'])) {
 			# Because these things are magically ambiguous, we'll
 			# resort to extension.
-			$ext = strtolower($pi['extension']);
-			switch ($ext) {
+			switch (strtolower($pi['extension'])) {
 				case 'css':
 					return 'text/css';
 				case 'js':
@@ -96,27 +95,27 @@ class Common {
 	 *     parameters and the rest are ignored. Use the kwargs format
 	 *     to avoid many meaningless default values just to reach to a
 	 *     desired parameter.
-	 * @param string $method HTTP request method.
+	 * @param string $method HTTP request method. Deprecated.
 	 * @param array $headers Optional request headers. Use this
-	 *     to set MIME, user-agent, etc.
+	 *     to set MIME, user-agent, etc. Deprecated.
 	 * @param array $get Query string will be built off of this.
 	 *     Do not use this if you already have query string in URL,
-	 *     unless you have too.
-	 * @param array $post POST, PUT, DELETE data dict.
+	 *     unless you have too. Deprecated.
+	 * @param array $post POST, PUT, DELETE data dict. Deprecated.
 	 * @param array $custom_opts Custom cURL options to add or
-	 *     override defaults.
+	 *     override defaults. Deprecated.
 	 * @param bool $expect_json Automatically JSON-decode response
 	 *     if this is set to true. This has nothing to do with
-	 *     'Accept: application/json' request header.
+	 *     'Accept: application/json' request header. Deprecated.
 	 * @param bool $is_raw If true, do not format request body as HTTP
-	 *     query.
+	 *     query. Deprecated.
 	 * @return array A list of the form [HTTP code, response body].
 	 *     HTTP code is -1 for invalid method, 0 for failing request,
 	 *     and any of standard code for successful request.
 	 *
 	 * @todo Only accept kwargs parameter in next minor release.
 	 */
-	final public static function http_client(
+	public static function http_client(
 		$url_or_kwargs, $method='GET', $headers=[], $get=[], $post=[],
 		$custom_opts=[], $expect_json=false, $is_raw=false
 	) {
@@ -134,7 +133,7 @@ class Common {
 			]));
 		}
 
-		if (!isset($url) || !$url)
+		if (!$url)
 			throw new CommonError("URL not set.");
 
 		$opts = [
@@ -146,12 +145,12 @@ class Common {
 			CURLOPT_MAXREDIRS      => 8,
 			CURLOPT_HEADER         => false,
 		];
-		foreach ($custom_opts as $k => $v)
-			$opts[$k] = $v;
+		foreach ($custom_opts as $key => $val)
+			$opts[$key] = $val;
 
 		$conn = curl_init();
-		foreach ($opts as $k => $v)
-			curl_setopt($conn, $k, $v);
+		foreach ($opts as $key => $val)
+			curl_setopt($conn, $key, $val);
 
 		if ($headers)
 			curl_setopt($conn, CURLOPT_HTTPHEADER, $headers);
