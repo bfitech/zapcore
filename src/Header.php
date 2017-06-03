@@ -177,6 +177,10 @@ class Header {
 	/**
 	 * Send file.
 	 *
+	 * Using higher-level Route::static_file_default is enough for
+	 * standard usage. Wrap this in Route::static_file_custom to make
+	 * a more elaborate static file serving.
+	 *
 	 * @param string $fpath Path to file.
 	 * @param mixed $disposition If set as string, this will be used
 	 *     as filename on content disposition. If set to true, content

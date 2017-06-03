@@ -16,11 +16,11 @@ class Router extends Header {
 	private $host = null;
 	private $auto_shutdown = true;
 
-	private $request_parsed = false;
+	private $request_initted = false;
 	private $request_handled = false;
 
+	private $request_method = null;
 	private $method_collection = [];
-	private $current_method = null;
 
 	/** Logging service. */
 	public static $logger = null;
@@ -87,7 +87,7 @@ class Router extends Header {
 	 * @param mixed $val Configuration value.
 	 */
 	final public function config($key, $val) {
-		if ($this->request_parsed)
+		if ($this->request_initted)
 			return $this;
 		switch ($key) {
 			case 'home':
@@ -119,12 +119,12 @@ class Router extends Header {
 	 * this.
 	 */
 	final public function init() {
-		if ($this->request_parsed)
+		if ($this->request_initted)
 			return;
-		$this->request_parse();
+		$this->init_request();
 		if ($this->auto_shutdown)
 			register_shutdown_function([$this, 'shutdown']);
-		$this->request_parsed = true;
+		$this->request_initted = true;
 		return $this;
 	}
 
@@ -143,11 +143,11 @@ class Router extends Header {
 		$this->host = null;
 		$this->auto_shutdown = true;
 
-		$this->request_parsed = false;
+		$this->request_initted = false;
 		$this->request_handled = false;
 
+		$this->request_method = null;
 		$this->method_collection = [];
-		$this->current_method = null;
 
 		return $this;
 	}
@@ -203,9 +203,12 @@ class Router extends Header {
 	}
 
 	/**
-	 * Request parser.
+	 * Initialize request processing.
+	 *
+	 * This sets home, host, and other request-related properties
+	 * based on current request URI.
 	 */
-	private function request_parse() {
+	private function init_request() {
 
 		$this->autodetect_home();
 
@@ -234,10 +237,122 @@ class Router extends Header {
 	}
 
 	/**
+	 * Verify route method.
+	 *
+	 * This validates route method, i.e. method parameter of
+	 * Router::route, collects it into method collection for accurate
+	 * abort code on shutdown, and finally matches it against current
+	 * request method.
+	 */
+	private function verify_route_method($path_method) {
+		$this->request_method = (
+			isset($_SERVER['REQUEST_METHOD']) &&
+			!empty($_SERVER['REQUEST_METHOD'])
+		) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
+
+		# always allow HEAD
+		$methods = is_array($path_method)
+			? $methods = array_merge($path_method, ['HEAD'])
+			: $methods = [$path_method, 'HEAD'];
+		$methods = array_unique($methods);
+		foreach ($methods as $method) {
+			if (!in_array($method, $this->method_collection))
+				$this->method_collection[] = $method;
+		}
+		if (!in_array($this->request_method, $methods))
+			return false;
+		return true;
+	}
+
+	/**
+	 * Parse request path.
+	 *
+	 * This generates path parser from route path to use against
+	 * request path.
+	 *
+	 * @param string $path Route path.
+	 * @return array|bool False if current request URI doesn't match,
+	 *     a dict otherwise. The dict will be assigned to
+	 *     $args['params'] of router callback, which is empty in case
+	 *     of non-compound route path.
+	 */
+	private function parse_request_path($path) {
+
+		# route path and request path is the same
+		if ($path == $this->request_path)
+			return [];
+
+		# generate parser
+		$parser = $this->path_parser($path);
+		if (!$parser[1])
+			return false;
+
+		# parse request
+		$pattern = '!^' . $parser[0] . '$!';
+		$matched = preg_match_all(
+			$pattern, $this->request_path,
+			$result, PREG_SET_ORDER);
+		if (!$matched)
+			return false;
+
+		unset($result[0][0]);
+		return array_combine($parser[1], $result[0]);
+	}
+
+	/**
+	 * Execute callback of a matched route.
+	 *
+	 * @param callable $callback Route callback.
+	 * @param array $args Route callback parameter.
+	 * @param bool $is_raw If true, request body is not treated as
+	 *     HTTP query. Applicable for POST only.
+	 */
+	private function execute_callback($callback, $args, $is_raw=null) {
+
+		if (in_array($this->request_method, [
+			'HEAD', 'GET', 'OPTIONS'])
+		) {
+			# HEAD, GET, OPTIONS execute immediately
+			$this->request_handled = true;
+			$this->wrap_callback($callback, $args);
+			return $this;
+		}
+
+		if ($this->request_method == 'POST') {
+			# POST, FILES
+			$args['post'] = $is_raw ?
+				file_get_contents("php://input") : $_POST;
+			if (isset($_FILES) && !empty($_FILES))
+				$args['files'] = $_FILES;
+		} elseif (in_array($this->request_method, [
+			'PUT', 'DELETE', 'PATCH'
+		])) {
+			$args[strtolower($this->request_method)] =
+				file_get_contents("php://input");
+		} else {
+			# TRACE, CONNECT, etc. In case webserver haven't disabled
+			# them.
+			self::$logger->warning(sprintf(
+				"Router: %s not supported in '%s'.",
+				$this->request_method, $this->request_path));
+			$this->abort(405);
+			# abort() and halt() can be patched so it doesn't always
+			# internally call die(). Let's keep the return value
+			# consistent.
+			return $this;
+		}
+
+		# execute callback
+		$this->request_handled = true;
+		$this->wrap_callback($callback, $args);
+		return $this;
+	}
+
+	/**
 	 * Path parser.
 	 *
-	 * This parses path and returns arrays that will parse
-	 * requests.
+	 * This parses route path and returns arrays that will parse
+	 * request path.
 	 *
 	 * @param string $path Route path with special enclosing
 	 *     characters:
@@ -248,7 +363,7 @@ class Router extends Header {
 	 *     - an array containing keys that will be used to create
 	 *       dynamic variables with whatever matches the previous
 	 *       regex
-	 * @see $this->route() for usage.
+	 * @see Router::route for usage.
 	 */
 	final public static function path_parser($path) {
 		$valid_chars = 'a-zA-Z0-9\_\.\-@%';
@@ -315,7 +430,7 @@ class Router extends Header {
 	 */
 	public function wrap_callback($callback, $args=[]) {
 		self::$logger->info(sprintf("Router: %s '%s'.",
-			$this->current_method, $this->request_path));
+			$this->request_method, $this->request_path));
 		$callback($args);
 		static::halt();
 	}
@@ -338,15 +453,14 @@ class Router extends Header {
 		$path, $callback, $method='GET', $is_raw=null
 	) {
 
-		# check if parser has been initialized
+		# route always initializes
 		$this->init();
 
-		# request has been handled
+		# check if request has been handled
 		if ($this->request_handled)
 			return $this;
 
-		// verify path
-
+		# verify path
 		if ($path[0] != '/') {
 			self::$logger->error(
 				"Router: path invalid in '$path'.");
@@ -356,61 +470,26 @@ class Router extends Header {
 			# ignore trailing slash
 			$path = rtrim($path, '/');
 
-		// verify callback
-
+		# verify callback
 		if (!is_callable($callback)) {
 			self::$logger->error(
 				"Router: callback invalid in '$path'.");
 			return $this;
 		}
 
-		// verify request method
-
-		$request_method = (
-			isset($_SERVER['REQUEST_METHOD']) &&
-			!empty($_SERVER['REQUEST_METHOD'])
-		) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
-		$this->current_method = $request_method;
-
-		# always allow HEAD
-		$methods = is_array($method)
-			? $methods = array_merge($method, ['HEAD'])
-			: $methods = [$method, 'HEAD'];
-		$methods = array_unique($methods);
-		# keep methods in collection for later deciding whether
-		# it's 404 or 501 on shutdown function
-		foreach ($methods as $m) {
-			if (!in_array($m, $this->method_collection))
-				$this->method_collection[] = $m;
-		}
-		if (!in_array($request_method, $methods))
+		# verify route method
+		if (!$this->verify_route_method($method))
 			return $this;
 
-		// initialize router callback arguments
+		# match route path with request path
+		if (false === $params = $this->parse_request_path($path))
+			return $this;
 
+		# we have a match at this point; start populating callback
+		# arguments
 		$args = [];
-		$args['method'] = $request_method;
-		$args['params'] = [];
-
-		if ($path != $this->request_path) {
-			$parser = $this->path_parser($path);
-			if (!$parser[1])
-				return $this;
-			$pattern = '!^' . $parser[0] . '$!';
-			$matched = preg_match_all(
-				$pattern, $this->request_path,
-				$result, PREG_SET_ORDER);
-			if (!$matched)
-				return $this;
-			unset($result[0][0]);
-			$args['params'] = array_combine(
-				$parser[1], $result[0]);
-		}
-
-		# we have a match at this point
-
-		// initialize HTTP variables
-
+		$args['method'] = $this->request_method;
+		$args['params'] = $params;
 		$args['get'] = $_GET;
 		$args['post'] = [];
 		$args['files'] = [];
@@ -419,9 +498,7 @@ class Router extends Header {
 		$args['patch'] = null;
 		$args['cookie'] = $_COOKIE;
 		$args['header'] = [];
-
-		// populate custom headers
-
+		# custom headers
 		foreach ($_SERVER as $key => $val) {
 			if (strpos($key, 'HTTP_') === 0) {
 				$key = substr($key, 5, strlen($key));
@@ -430,44 +507,8 @@ class Router extends Header {
 			}
 		}
 
-		// collect router callback arguments from HTTP variables
-
-		if (in_array($request_method, ['HEAD', 'GET', 'OPTIONS'])) {
-			# HEAD, GET, OPTIONS execute immediately
-			$this->request_handled = true;
-			$this->wrap_callback($callback, $args);
-			return $this;
-		}
-		if ($request_method == 'POST') {
-			# POST, FILES
-			$args['post'] = $is_raw ?
-				file_get_contents("php://input") : $_POST;
-			if (isset($_FILES) && !empty($_FILES))
-				$args['files'] = $_FILES;
-		} elseif (in_array($request_method, [
-			'PUT', 'DELETE', 'PATCH'
-		])) {
-			$args[strtolower($request_method)] = file_get_contents(
-				"php://input");
-		} else {
-			# TRACE, CONNECT, etc. In case webserver haven't disabled
-			# them.
-			self::$logger->warning(sprintf(
-				"Router: %s not supported in '%s'.",
-				$request_method, $this->request_path));
-			$this->abort(405);
-			# abort() and halt() can be patched so it doesn't always
-			# internally call die(). Let's keep the return value
-			# consistent.
-			return $this;
-		}
-
-		// execute callback
-
-		$this->request_handled = true;
-		$this->wrap_callback($callback, $args);
-
-		return $this;
+		# let the callback executes
+		return $this->execute_callback($callback, $args, $is_raw);
 	}
 
 	/**
@@ -488,8 +529,8 @@ class Router extends Header {
 		<style>
 			body {background-color: #eee; font-family: sans-serif;}
 			div  {background-color: #fff; border: 1px solid #ddd;
-				  padding: 25px; max-width:800px;
-				  margin:20vh auto 0 auto; text-align:center;}
+			      padding: 25px; max-width:800px;
+			      margin:20vh auto 0 auto; text-align:center;}
 		</style>
 	</head>
 	<body>
@@ -544,8 +585,8 @@ class Router extends Header {
 		<style>
 			body {background-color: #eee; font-family: sans-serif;}
 			div  {background-color: #fff; border: 1px solid #ddd;
-				  padding: 25px; max-width:800px;
-				  margin:20vh auto 0 auto; text-align:center;}
+			      padding: 25px; max-width:800px;
+			      margin:20vh auto 0 auto; text-align:center;}
 		</style>
 	</head>
 	<body>
@@ -620,11 +661,11 @@ class Router extends Header {
 		if ($this->request_handled)
 			return;
 		$code = 501;
-		if (in_array($this->current_method, $this->method_collection))
+		if (in_array($this->request_method, $this->method_collection))
 			$code = 404;
 		self::$logger->info(sprintf(
 			"Router: shutdown %s in %s '%s'.",
-			$code, $this->current_method, $this->request_path));
+			$code, $this->request_method, $this->request_path));
 		$this->abort($code);
 	}
 
@@ -648,7 +689,7 @@ class Router extends Header {
 	 * Show current request method.
 	 */
 	public function get_request_method() {
-		return $this->current_method;
+		return $this->request_method;
 	}
 
 	/**
