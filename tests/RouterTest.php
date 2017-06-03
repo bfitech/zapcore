@@ -257,6 +257,23 @@ class RouterTest extends TestCase {
 			$this->assertEquals($args['header']['referer'],
 				'http://localhost');
 		}, 'POST');
+
+		# mock file upload
+		$core->deinit()->reset();
+		$_POST['x'] = 'y';
+		$_FILES = [
+			'myfile' => [
+				'name' => 'whatever.dat',
+				'error' => 0,
+			],
+		];
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['REQUEST_URI'] = '/test/upload';
+
+		$core->route('/test/upload', function($args) use($core){
+			$this->assertEquals('whatever.dat',
+				$args['files']['myfile']['name']);
+		}, 'POST');
 	}
 
 	public function test_route_get() {
