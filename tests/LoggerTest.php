@@ -74,6 +74,9 @@ class LoggerTest extends TestCase {
 		$this->assertFalse($this->str_in_file($fl2, 'DEB'));
 		$this->assertTrue($this->str_in_file($fl3, 'DEB'));
 
+		#if (posix_getuid() === 0)
+		#	return;
+
 		# automatically write to STDERR if file is read-only
 		chmod($fl3, 0400);
 		$logger = new Logger(Logger::DEBUG, $fl3);
