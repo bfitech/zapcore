@@ -28,8 +28,6 @@ class CoreDevTest extends TestCase {
 	}
 
 	public function test_coredev_error_privileged_port() {
-		#if (posix_getuid() === 0)
-		#	return;
 		$this->setExpectedException(CoreDevError::class);
 		CoreDev::server_up(__DIR__, 81);
 	}
