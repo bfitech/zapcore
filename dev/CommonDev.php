@@ -105,6 +105,7 @@ class CoreDev {
 	 *
 	 * @param string $fname Reference filename, typically a script
 	 *     name provided by __FILE__.
+	 * @codeCoverageIgnore
 	 */
 	final public static function testdir($fname) {
 		if (defined('__TESTDIR__'))
