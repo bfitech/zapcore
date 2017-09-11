@@ -3,11 +3,16 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
+use BFITech\ZapCoreDev\CoreDev;
 
 
 class LoggerTest extends TestCase {
 
 	public static $flogs = [];
+
+	public static function setUpBeforeClass() {
+		CoreDev::testdir(__FILE__);
+	}
 
 	public static function tearDownAfterClass() {
 		foreach (self::$flogs as $fl) {
@@ -23,7 +28,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_constructor() {
-		$fl = getcwd() . '/zapcore-logger-test-00.log';
+		$fl = __TESTDIR__ . '/zapcore-logger-test-00.log';
 		self::$flogs[] = $fl;
 
 		$logger = new Logger('a', $fl);
@@ -35,7 +40,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_logger_write() {
-		$fl = getcwd() . '/zapcore-logger-test-01.log';
+		$fl = __TESTDIR__ . '/zapcore-logger-test-01.log';
 		self::$flogs[] = $fl;
 
 		$logger = new Logger(Logger::INFO, $fl);
@@ -57,7 +62,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_logger_io() {
-		$_fl = getcwd() . '/zapcore-logger-test-';
+		$_fl = __TESTDIR__ . '/zapcore-logger-test-';
 
 		$fl2 = $_fl . '02.log';
 		self::$flogs[] = $fl2;
@@ -93,7 +98,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_logger_activation() {
-		$fl = getcwd() . '/zapcore-logger-test-04.log';
+		$fl = __TESTDIR__ . '/zapcore-logger-test-04.log';
 		self::$flogs[] = $fl;
 
 		$logger = new Logger(Logger::DEBUG, $fl);

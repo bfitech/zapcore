@@ -3,10 +3,13 @@
 
 require(__DIR__ . './../vendor/autoload.php');
 
+
+use BFITech\ZapCoreDev\CoreDev;
 use BFITech\ZapCore as zc;
 
+
 $logger = new zc\Logger(zc\Logger::DEBUG,
-	__DIR__ . '/zapcore-test.log');
+	CoreDev::testdir(__FILE__) . '/zapcore-test.log');
 $core = new zc\Router(null, null, true, $logger);
 
 $core->route('/', function($args) use($core) {

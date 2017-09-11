@@ -4,6 +4,7 @@
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCore\Router;
+use BFITech\ZapCoreDev\CoreDev;
 use BFITech\ZapCoreDev\RouterDev;
 
 
@@ -29,7 +30,7 @@ class RouterTest extends TestCase {
 	public static $logger;
 
 	public static function setUpBeforeClass() {
-		$logfile = __DIR__ . '/zapcore-test.log';
+		$logfile = CoreDev::testdir(__FILE__) . '/zapcore-test.log';
 		if (file_exists($logfile))
 			unlink($logfile);
 		self::$logger = new Logger(Logger::DEBUG, $logfile);
