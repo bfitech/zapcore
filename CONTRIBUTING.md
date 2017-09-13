@@ -43,24 +43,19 @@ Find a bug? Help us fix it.
 
 5.  Make sure coding convention is met as much as possible. For
     automated check, use [code sniffer](https://github.com/squizlabs/PHP_CodeSniffer)
-    ruleset that comes with this repository:
+    and [mess detector](https://github.com/phpmd/phpmd) rulesets
+    that come with this repository:
 
     ```txt
+    $ export PATH=~/.composer/vendor/bin:$PATH
+    $
     $ # coding convention compliance with phpcs
     $ composer global require squizlabs/php_codesniffer
-    $ ~/.composer/vendor/bin/phpcs \
-    > --standard=./phpcs.ruleset.xml \
-    > --extensions=php \
-    > --runtime-set ignore_warnings_on_exit 1 \
-    > --report-width=72 \
-    > --ignore=*/vendor/*,*/docs/* \
-    > --no-cache \
-    > ./src
+    $ phpcs
     $
     $ # static analysis with phpmd
     $ composer global require phpmd/phpmd
-    $ ~/.composer/vendor/bin/phpmd ./src \
-    > text cleancode,codesize,design,unusedcode
+    $ phpmd ./src text ./phpmd.xml
     ```
 
 6.  Push to your fork and submit a Pull Request.
