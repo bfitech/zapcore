@@ -60,7 +60,7 @@ class CoreDev {
 		#     down and http_errno=-1 if it doesn't support
 		#     current method. On the server side, root path of
 		#     running server is not necessarily returning 200.
-		if (Common::http_client($srv)[0] > 0)
+		if (Common::http_client(['url' => $srv])[0] > 0)
 			throw new CoreDevError(
 				"Server is running. Kill it with fire.");
 
@@ -79,7 +79,7 @@ class CoreDev {
 		# wait till it's up
 		$i = 400;
 		while (1) {
-			if (Common::http_client($srv)[0] > 0)
+			if (Common::http_client(['url' => $srv])[0] > 0)
 				return $pid;
 			sleep(0.1);
 			if (--$i <= 0)

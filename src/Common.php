@@ -43,11 +43,11 @@ class Common {
 		$fname, $path_to_file=null
 	) {
 
-		$pi = pathinfo($fname);
-		if (isset($pi['extension'])) {
+		$pinfo = pathinfo($fname);
+		if (isset($pinfo['extension'])) {
 			# Because these things are magically ambiguous, we'll
 			# resort to extension.
-			switch (strtolower($pi['extension'])) {
+			switch (strtolower($pinfo['extension'])) {
 				case 'css':
 					return 'text/css';
 				case 'js':
@@ -90,48 +90,42 @@ class Common {
 	/**
 	 * cURL-based HTTP client.
 	 *
-	 * @param string|array $url_or_kwargs If it's a string,
-	 *     it's the URL. Otherwise it will be expanded as the whole
-	 *     parameters and the rest are ignored. Use the kwargs format
-	 *     to avoid many meaningless default values just to reach to a
-	 *     desired parameter.
-	 * @param string $method HTTP request method. Deprecated.
-	 * @param array $headers Optional request headers. Use this
-	 *     to set MIME, user-agent, etc. Deprecated.
-	 * @param array $get Query string will be built off of this.
-	 *     Do not use this if you already have query string in URL,
-	 *     unless you have too. Deprecated.
-	 * @param array $post POST, PUT, DELETE data dict. Deprecated.
-	 * @param array $custom_opts Custom cURL options to add or
-	 *     override defaults. Deprecated.
-	 * @param bool $expect_json Automatically JSON-decode response
-	 *     if this is set to true. This has nothing to do with
-	 *     'Accept: application/json' request header. Deprecated.
-	 * @param bool $is_raw If true, do not format request body as HTTP
-	 *     query. Deprecated.
+	 * @param array $kwargs Dict with key-value:
+	 * - `url`         : (string) the URL
+	 * - `method`      : (string) HTTP request method
+	 * - `headers`     : (array) optional request headers, useful for
+	 *                   setting MIME type, user agent, etc.
+	 * - `get`         : (dict) query string will be built off of
+	 *                   this; leave empty if you already have
+	 *                   query string in URL, unless you have to
+	 * - `post`        : (dict|string) POST, PUT, or other request
+	 *                   body; if `is_raw` is true, string is expected
+	 * - `custom_opts` : (dict) custom cURL options to add or override
+	 *                   defaults
+	 * - `expect_json` : (bool) JSON-decode response if true, whether
+	 *                   server honors `Accept: application/json`
+	 *                   request header or not; response data is null
+	 *                   if response body is not valid JSON
+	 * - `is_raw`      : (bool) if true, do not format request body
+	 *                    as query string
+	 * @endcode
 	 * @return array A list of the form [HTTP code, response body].
-	 *     HTTP code is -1 for invalid method, 0 for failing request,
-	 *     and any of standard code for successful request.
-	 *
-	 * @todo Only accept kwargs parameter in next minor release.
+	 *     HTTP code is -1 for invalid method, 0 for failing connection,
+	 *     and any of standard code for successful connection.
 	 */
-	public static function http_client(
-		$url_or_kwargs, $method='GET', $headers=[], $get=[], $post=[],
-		$custom_opts=[], $expect_json=false, $is_raw=false
-	) {
-		$url = $url_or_kwargs;
-		if (is_array($url)) {
-			extract(self::extract_kwargs($url, [
-				'url' => null,
-				'method' => 'GET',
-				'headers'=> [],
-				'get' => [],
-				'post' => [],
-				'custom_opts' => [],
-				'expect_json' => false,
-				'is_raw' => false,
-			]));
-		}
+	public static function http_client($kwargs) {
+		$url = $method = $headers = $get = $post = null;
+		$custom_opts = $expect_json = $is_raw = null;
+		extract(self::extract_kwargs($kwargs, [
+			'url' => null,
+			'method' => 'GET',
+			'headers'=> [],
+			'get' => [],
+			'post' => [],
+			'custom_opts' => [],
+			'expect_json' => false,
+			'is_raw' => false,
+		]));
 
 		if (!$url)
 			throw new CommonError("URL not set.");

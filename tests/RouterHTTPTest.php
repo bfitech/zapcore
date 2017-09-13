@@ -33,17 +33,24 @@ class RouterHTTPTest extends TestCase {
 	}
 
 	public static function client(
-		$url_or_kwargs, $method='GET', $header=[], $get=[], $post=[],
-		$curl_opts=[], $expect_json=false, $is_raw=false
+		$url, $method='GET', $headers=[], $get=[], $post=[],
+		$custom_opts=[], $expect_json=false, $is_raw=false
 	) {
-		return Common::http_client(
-			$url_or_kwargs, $method, $header, $get, $post,
-			$curl_opts, $expect_json, $is_raw);
+		return Common::http_client([
+			'url' => $url,
+			'method' => $method,
+			'headers' => $headers,
+			'get' => $get,
+			'post' => $post,
+			'custom_opts' => $custom_opts,
+			'expect_json' => $expect_json,
+			'is_raw' => $is_raw
+		]);
 	}
 
 	public static function request($kwargs) {
 		$kwargs['url'] = self::$server_addr . $kwargs['url'];
-		return self::client($kwargs);
+		return Common::http_client($kwargs);
 	}
 
 	public function test_environment() {
@@ -54,7 +61,10 @@ class RouterHTTPTest extends TestCase {
 		}
 
 		$this->assertEquals(
-			Common::http_client(self::$server_addr, 'HEAD')[0], 200);
+			Common::http_client([
+				'url' => self::$server_addr,
+				'method' => 'HEAD'
+			])[0], 200);
 		$this->assertEquals(
 			self::client(self::$server_addr)[0], 200);
 
