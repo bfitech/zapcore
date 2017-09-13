@@ -159,12 +159,16 @@ class Router extends Header {
 	 * or Nginx PHP-FPM. Fails miserably when Alias directive or
 	 * mod_proxy is involved, in which case, manual config should be
 	 * used. Untested on lighty and other servers.
+	 *
+	 * @fixme This becomes untestable after SAPI detection, since all
+	 *     tests run from CLI.
+	 * @codeCoverageIgnore
 	 */
 	private function autodetect_home() {
 		if ($this->home !== null)
 			return;
 		if (php_sapi_name() == 'cli')
-			return '/';
+			return $this->home = '/';
 		$home = dirname($_SERVER['SCRIPT_NAME']);
 		$home = !$home || $home[0] != '/'
 			? '/' : rtrim($home, '/') . '/';

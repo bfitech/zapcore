@@ -10,7 +10,7 @@ use BFITech\ZapCore as zc;
 
 $logger = new zc\Logger(zc\Logger::DEBUG,
 	CoreDev::testdir(__FILE__) . '/zapcore-test.log');
-$core = new zc\Router(null, null, true, $logger);
+$core = (new zc\Router)->config('logger', $logger);
 
 $core->route('/', function($args) use($core) {
 	echo "Hello Friend";
