@@ -155,13 +155,16 @@ class Router extends Header {
 	/**
 	 * Autodetect home.
 	 *
-	 * Naive home detection. Works on standard mod_php or mod_fcgid
-	 * setup. Fails miserably when Alias directive or mod_proxy is
-	 * involved, in which case, manual config should be used.
+	 * Naive home detection. Works on standard mod_php, mod_fcgid,
+	 * or Nginx PHP-FPM. Fails miserably when Alias directive or
+	 * mod_proxy is involved, in which case, manual config should be
+	 * used. Untested on lighty and other servers.
 	 */
 	private function autodetect_home() {
 		if ($this->home !== null)
 			return;
+		if (php_sapi_name() == 'cli')
+			return '/';
 		$home = dirname($_SERVER['SCRIPT_NAME']);
 		$home = !$home || $home[0] != '/'
 			? '/' : rtrim($home, '/') . '/';
@@ -186,20 +189,29 @@ class Router extends Header {
 		$port = isset($_SERVER['SERVER_PORT'])
 			? (int)$_SERVER['SERVER_PORT'] : null;
 		// @codeCoverageIgnoreStart
-		if ($port) {
-			if ($port < 0 || $port > pow(2, 16))
-				$port = null;
-			elseif ($port == 80 && $proto == 'http')
-				$port = null;
-			elseif ($port == 443 && $proto == 'https')
-				$port = null;
-		}
+		$port = $this->verify_port($port, $proto);
 		if ($port && (strpos($host, ':') === false))
 			$host .= ':' . $port;
 		// @codeCoverageIgnoreEnd
 		$host = str_replace([':80', ':443'], '', $host);
-		$host = $proto . $host . $this->home;
-		$this->host = $host;
+		$this->host = $proto . $host . $this->home;
+	}
+
+	/**
+	 * Verify if port number is valid and not redundant with protocol.
+	 *
+	 * @codeCoverageIgnore
+	 */
+	private function verify_port($port, $proto) {
+		if (!$port)
+			return $port;
+		if ($port < 0 || $port > pow(2, 16))
+			return null;
+		if ($port == 80 && $proto == 'http')
+			return null;
+		if ($port == 443 && $proto == 'https')
+			return null;
+		return $port;
 	}
 
 	/**
@@ -363,6 +375,10 @@ class Router extends Header {
 	 *       dynamic variables with whatever matches the previous
 	 *       regex
 	 * @see Router::route for usage.
+	 *
+	 * @manonly
+	 * @SuppressWarnings(PHPMD.ShortVariable)
+	 * @endmanonly
 	 */
 	final public static function path_parser($path) {
 		$valid_chars = 'a-zA-Z0-9\_\.\-@%';

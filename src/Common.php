@@ -43,33 +43,51 @@ class Common {
 		$fname, $path_to_file=null
 	) {
 
-		$pinfo = pathinfo($fname);
-		if (isset($pinfo['extension'])) {
-			# Because these things are magically ambiguous, we'll
-			# resort to extension.
-			switch (strtolower($pinfo['extension'])) {
-				case 'css':
-					return 'text/css';
-				case 'js':
-					return 'application/javascript';
-				case 'json':
-					return 'application/json';
-				case 'htm':
-				case 'html':
-					# always assume UTF-8
-					return 'text/html; charset=utf-8';
-			}
-		}
+		if (null === $mime = self::_mime_extension($fname))
+			return self::_mime_magic($fname, $path_to_file);
+		return $mime;
+	}
 
-		# with builtin
-		if (function_exists('mime_content_type')) {
-			$mime = @mime_content_type($fname);
-			if ($mime && $mime != 'application/octet-stream')
-				return $mime;
+	/**
+	 * Get MIME by extension.
+	 *
+	 * Useful for serving typical text files that don't have unique
+	 * magic numbers.
+	 */
+	private static function _mime_extension($fname) {
+		$pinfo = pathinfo($fname);
+		if (!isset($pinfo['extension']))
+			return null;
+		# Because these things are magically ambiguous, we'll
+		# resort to extension.
+		switch (strtolower($pinfo['extension'])) {
+			case 'css':
+				return 'text/css';
+			case 'js':
+				return 'application/javascript';
+			case 'json':
+				return 'application/json';
+			case 'htm':
+			case 'html':
+				# always assume UTF-8
+				return 'text/html; charset=utf-8';
 		}
+		return null;
+	}
+
+	/**
+	 * Get MIME type with `mime_content_type` or `file`.
+	 */
+	private static function _mime_magic($fname, $path_to_file=null) {
+		# with builtin
+		if (
+			function_exists('mime_content_type') &&
+			($mime = @mime_content_type($fname)) &&
+			$mime != 'application/octet-stream'
+		)
+			return $mime;
 
 		# with `file`
-		$cmd = '%s -bip %s';
 		if ($path_to_file && is_executable($path_to_file)) {
 			$bin = $path_to_file;
 		} elseif (!($bin = self::exec("bash -c 'type -p file'")[0])) {
@@ -77,8 +95,11 @@ class Common {
 			return 'application/octet-stream';
 			// @codeCoverageIgnoreEnd
 		}
-		$mimes = self::exec($cmd, [$bin, $fname]);
-		if ($mimes && preg_match('!^[a-z0-9\-]+/!i', $mimes[0]))
+
+		if (
+			($mimes = self::exec('%s -bip %s', [$bin, $fname])) &&
+			preg_match('!^[a-z0-9\-]+/!i', $mimes[0])
+		)
 			return $mimes[0];
 
 		# giving up
@@ -91,31 +112,32 @@ class Common {
 	 * cURL-based HTTP client.
 	 *
 	 * @param array $kwargs Dict with key-value:
-	 * - `url`         : (string) the URL
-	 * - `method`      : (string) HTTP request method
-	 * - `headers`     : (array) optional request headers, useful for
-	 *                   setting MIME type, user agent, etc.
-	 * - `get`         : (dict) query string will be built off of
-	 *                   this; leave empty if you already have
-	 *                   query string in URL, unless you have to
-	 * - `post`        : (dict|string) POST, PUT, or other request
-	 *                   body; if `is_raw` is true, string is expected
-	 * - `custom_opts` : (dict) custom cURL options to add or override
-	 *                   defaults
-	 * - `expect_json` : (bool) JSON-decode response if true, whether
-	 *                   server honors `Accept: application/json`
-	 *                   request header or not; response data is null
-	 *                   if response body is not valid JSON
-	 * - `is_raw`      : (bool) if true, do not format request body
-	 *                    as query string
-	 * @endcode
-	 * @return array A list of the form [HTTP code, response body].
+	 * - `url`     : (string) the URL
+	 * - `method`  : (string) HTTP request method
+	 * - `headers` : (array) optional request headers, useful for
+	 *               setting MIME type, user agent, etc.
+	 * - `get`     : (dict) query string will be built off of
+	 *               this; leave empty if you already have
+	 *               query string in URL, unless you have to
+	 * - `post`    : (dict|string) POST, PUT, or other request
+	 *               body; if it's a string, it won't be formatted
+	 *               as a query string
+	 * - `custom_opts` :
+	 *               (dict) custom cURL options to add or override
+	 *               defaults
+	 * - `expect_json` :
+	 *               (bool) JSON-decode response if true, whether
+	 *               server honors `Accept: application/json`
+	 *               request header or not; response data is null
+	 *               if response body is not valid JSON
+	 * @return array A list of the form `[HTTP code, response body]`.
 	 *     HTTP code is -1 for invalid method, 0 for failing connection,
 	 *     and any of standard code for successful connection.
 	 */
 	public static function http_client($kwargs) {
-		$url = $method = $headers = $get = $post = null;
-		$custom_opts = $expect_json = $is_raw = null;
+		$url = $method = null;
+		$headers = $get = $post = $custom_opts = [];
+		$expect_json = false;
 		extract(self::extract_kwargs($kwargs, [
 			'url' => null,
 			'method' => 'GET',
@@ -124,7 +146,6 @@ class Common {
 			'post' => [],
 			'custom_opts' => [],
 			'expect_json' => false,
-			'is_raw' => false,
 		]));
 
 		if (!$url)
@@ -132,7 +153,7 @@ class Common {
 
 		$opts = [
 			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_SSL_VERIFYPEER => false,
+			CURLOPT_SSL_VERIFYPEER => true,
 			CURLOPT_CONNECTTIMEOUT => 16,
 			CURLOPT_TIMEOUT        => 16,
 			CURLOPT_FOLLOWLOCATION => true,
@@ -153,24 +174,30 @@ class Common {
 			$url .= strpos($url, '?') !== false ? '&' : '?';
 			$url .= http_build_query($get);
 		}
-
 		curl_setopt($conn, CURLOPT_URL, $url);
 
-		if (in_array($method, ['HEAD', 'OPTIONS'])) {
-			curl_setopt($conn, CURLOPT_NOBODY, true);
-			curl_setopt($conn, CURLOPT_HEADER, true);
-		} elseif ($method == 'GET') {
-			# noop
-		} elseif (in_array($method, [
-			'POST', 'PUT', 'DELETE', 'PATCH', 'TRACE',
-		])) {
-			curl_setopt($conn, CURLOPT_CUSTOMREQUEST, $method);
-			if (!$is_raw && is_array($post))
-				$post = http_build_query($post);
-			curl_setopt($conn, CURLOPT_POSTFIELDS, $post);
-		} else {
-			# CONNECT etc. are not supported ... yet?
-			return [-1, null];
+		if (is_array($post))
+			$post = http_build_query($post);
+
+		switch ($method) {
+			case 'GET':
+				break;
+			case 'HEAD':
+			case 'OPTIONS':
+				curl_setopt($conn, CURLOPT_NOBODY, true);
+				curl_setopt($conn, CURLOPT_HEADER, true);
+				break;
+			case 'POST':
+			case 'PUT':
+			case 'DELETE':
+			case 'PATCH':
+			case 'TRACE':
+				curl_setopt($conn, CURLOPT_CUSTOMREQUEST, $method);
+				curl_setopt($conn, CURLOPT_POSTFIELDS, $post);
+				break;
+			default:
+				# CONNECT etc. are not supported ... yet?
+				return [-1, null];
 		}
 
 		$body = curl_exec($conn);

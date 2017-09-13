@@ -107,6 +107,10 @@ class Header {
 	 *     the mercy of `print_r()`: formatted array, true becomes '1',
 	 *     etc. Use with care.
 	 * @codeCoverageIgnore
+	 *
+	 * @manonly
+	 * @SuppressWarnings(PHPMD.ExitExpression)
+	 * @endmanonly
 	 */
 	public static function halt($arg=null) {
 		if ($arg === null)
@@ -247,12 +251,12 @@ class Header {
 	final public static function print_json(
 		$errno=0, $data=[], $http_code=200, $cache=0
 	) {
-		$js = json_encode(compact('errno', 'data'));
+		$json = json_encode(compact('errno', 'data'));
 		self::start_header($http_code, $cache, [
-			'Content-Length: ' . strlen($js),
+			'Content-Length: ' . strlen($json),
 			'Content-Type: application/json',
 		]);
-		static::halt($js);
+		static::halt($json);
 	}
 
 	/**
@@ -265,6 +269,10 @@ class Header {
 	 *     this parameter, e.g. 403.
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 * @see Header::print_json.
+	 *
+	 * @manonly
+	 * @SuppressWarnings(PHPMD.ShortMethodName)
+	 * @endmanonly
 	 */
 	final public static function pj(
 		$retval, $forbidden_code=null, $cache=0
