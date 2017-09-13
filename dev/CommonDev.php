@@ -11,6 +11,9 @@ class CoreDevError extends \Exception {
 
 /**
  * CoreDev class.
+ *
+ * @todo Change class name to CommonDev for consistency.
+ * @todo Non-*nix support.
  */
 class CoreDev {
 
@@ -23,6 +26,8 @@ class CoreDev {
 	 *     directory of a PHP script. Defaults to `pwd`.
 	 * @param int $port Server port.
 	 * @return int PID of server process.
+	 * @todo Port hopping, in case standard test port is already
+	 *     bound to another non-zap service.
 	 */
 	final public static function server_up(
 		$starting_point=null, $port=9999
@@ -95,7 +100,6 @@ class CoreDev {
 	final public static function server_down($pid) {
 		exec("kill " . $pid);
 	}
-
 
 	/**
 	 * Set test directory.
