@@ -6,6 +6,10 @@ namespace BFITech\ZapCore;
 
 /**
  * Router class.
+ *
+ * Suppress all the PMD warnings in this class.
+ *
+ * @SuppressWarnings(PHPMD)
  */
 class Router extends Header {
 
