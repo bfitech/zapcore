@@ -43,8 +43,8 @@ class Router extends Header {
 	) {
 		self::$logger = $logger ? $logger : new Logger();
 		self::$logger->debug('Router: started.');
-		$this->home = $home;
-		$this->host = $host;
+		$this->config_home($home);
+		$this->config_host($host);
 		$this->auto_shutdown = $shutdown;
 	}
 
