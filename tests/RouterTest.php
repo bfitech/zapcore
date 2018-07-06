@@ -163,8 +163,8 @@ class RouterTest extends TestCase {
 		$rv = $core->path_parser('/x/<v1>/y/{v2}/z');
 		$this->assertSame($rv[1], ['v1', 'v2']);
 
-		// @fixme This shouldn't happen. __(y{v2}) != __(y/{v2})
-		$rv = $core->path_parser('/x/<v1>/y{v2}/z');
+		# long var
+		$rv = $core->path_parser('/x/<v1>/y/{v2}/z');
 		$this->assertSame($rv[1], ['v1', 'v2']);
 
 		# illegal character
