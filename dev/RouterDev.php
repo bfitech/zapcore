@@ -27,6 +27,8 @@ class RouterDev extends Router {
 	/** Default data for JSON response. */
 	public static $data = [];
 
+	private static $override_args = [];
+
 	/**
 	 * Reset fake HTTP variables and properties.
 	 */
@@ -44,6 +46,8 @@ class RouterDev extends Router {
 
 	/**
 	 * Patched Header::header().
+	 *
+	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
 	 */
 	public static function header($header_string, $replace=false) {
 		if (strpos($header_string, 'HTTP/1') !== false) {
@@ -55,6 +59,8 @@ class RouterDev extends Router {
 
 	/**
 	 * Patched Header::send_cookie().
+	 *
+	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
 	 */
 	public static function send_cookie(
 		$name, $value='', $expire=0, $path='', $domain='',
@@ -84,6 +90,8 @@ class RouterDev extends Router {
 	 */
 	public function wrap_callback($callback, $args=[]) {
 		ob_start();
+		if (self::$override_args)
+			$args = self::$override_args;
 		$callback($args);
 		self::$body_raw = ob_get_clean();
 		self::$body = json_decode(self::$body_raw, true);
@@ -94,6 +102,13 @@ class RouterDev extends Router {
 			self::$errno = 0;
 			self::$data = [];
 		}
+	}
+
+	/**
+	 * Overrides callback args.
+	 */
+	public function override_callback_args($args=[]) {
+		self::$override_args = $args;
 	}
 
 	/**
@@ -120,6 +135,8 @@ class RouterDev extends Router {
 
 	/**
 	 * Custom static file serving for testing.
+	 *
+	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
 	 */
 	public function static_file_custom(
 		$path, $cache=0, $disposition=false
@@ -134,6 +151,58 @@ class RouterDev extends Router {
 		} else {
 			self::$code = 404;
 		}
+	}
+
+}
+
+
+/**
+ * Mock routing.
+ *
+ * Use this class to instantiate a router and perform requests on it
+ * without manually manipulating HTTP variables.
+ */
+class RoutingDev {
+
+	/** RouterDev instance. */
+	public static $core;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param RouterDev $core RouterDev instance. Optional. Since the
+	 *     router this sets is made public and static, you can always
+	 *     patch as you go.
+	 */
+	public function __construct(RouterDev $core=null) {
+		self::$core = ($core != null) ? $core : new RouterDev;
+	}
+
+	/**
+	 * Fake request.
+	 *
+	 * Use this to simulate HTTP request. To set args to callback
+	 * handler without relying on collected HTTP variables, use
+	 * $args.
+	 *
+	 * @param string $request_uri Simulated request URI.
+	 * @param string $request_method Simulated request method.
+	 * @param array $args Simulated callback args. This includes
+	 *     request headers.
+	 * @param array $cookie Simulated cookies.
+	 */
+	public function request(
+		$request_uri=null, $request_method='GET', $args=[], $cookie=[]
+	) {
+		self::$core->deinit()->reset();
+		self::$core->config('home', '/');
+		$_SERVER['REQUEST_URI'] = $request_uri
+			? $request_uri : '/';
+		$_SERVER['REQUEST_METHOD'] = $request_method;
+		$_COOKIE = $cookie;
+		if ($args)
+			self::$core->override_callback_args($args);
+		return $this;
 	}
 
 }
