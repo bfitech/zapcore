@@ -3,7 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
-use BFITech\ZapCoreDev\CoreDev;
+use BFITech\ZapCommonDev\CommonDev;
 
 
 class LoggerTest extends TestCase {
@@ -11,7 +11,7 @@ class LoggerTest extends TestCase {
 	public static $flogs = [];
 
 	public static function setUpBeforeClass() {
-		CoreDev::testdir(__FILE__);
+		CommonDev::testdir(__FILE__);
 	}
 
 	public static function tearDownAfterClass() {

@@ -13,6 +13,8 @@ class CommonDevError extends \Exception {
  * CommonDev class.
  *
  * @todo Non-*nix support.
+ * @codeCoverageIgnore
+ * @deprecated
  */
 class CommonDev {
 
@@ -25,7 +27,6 @@ class CommonDev {
 	 *     directory of a PHP script. Defaults to `pwd`.
 	 * @param int $port Server port.
 	 * @return int PID of server process.
-	 * @deprecated
 	 *
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
@@ -110,7 +111,6 @@ class CommonDev {
 	 *
 	 * @param string $fname Reference filename, typically a script
 	 *     name provided by __FILE__.
-	 * @codeCoverageIgnore
 	 */
 	final public static function testdir($fname) {
 		if (defined('__TESTDIR__'))
