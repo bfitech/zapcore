@@ -9,7 +9,11 @@ class CommonError extends \Exception {
 
 
 /**
- * Common class.
+ * Utility class.
+ *
+ * @manonly
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @endmanonly
  */
 class Common {
 
@@ -56,8 +60,10 @@ class Common {
 	 */
 	private static function _mime_extension($fname) {
 		$pinfo = pathinfo($fname);
+		// @codeCoverageIgnoreStart
 		if (!isset($pinfo['extension']))
 			return null;
+		// @codeCoverageIgnoreEnd
 		# Because these things are magically ambiguous, we'll
 		# resort to extension.
 		switch (strtolower($pinfo['extension'])) {
@@ -87,13 +93,13 @@ class Common {
 		)
 			return $mime;
 
-		# with `file`
+		# with `file`, skip coverage because `file` is usually
+		# not available on CI
+		// @codeCoverageIgnoreStart
 		if ($path_to_file && is_executable($path_to_file)) {
 			$bin = $path_to_file;
 		} elseif (!($bin = self::exec("bash -c 'type -p file'")[0])) {
-			// @codeCoverageIgnoreStart
 			return 'application/octet-stream';
-			// @codeCoverageIgnoreEnd
 		}
 
 		if (
@@ -103,7 +109,6 @@ class Common {
 			return $mimes[0];
 
 		# giving up
-		// @codeCoverageIgnoreStart
 		return 'application/octet-stream';
 		// @codeCoverageIgnoreEnd
 	}
@@ -133,7 +138,12 @@ class Common {
 	 * @return array A list of the form `[HTTP code, response body]`.
 	 *     HTTP code is -1 for invalid method, 0 for failing connection,
 	 *     and any of standard code for successful connection.
+	 *
+	 * @manonly
 	 * @codeCoverageIgnore
+	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+	 * @SuppressWarnings(PHPMD.NPathComplexity)
+	 * @endmanonly
 	 */
 	public static function http_client($kwargs) {
 		$url = $method = null;

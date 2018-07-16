@@ -47,7 +47,9 @@ class RouterDev extends Router {
 	/**
 	 * Patched Header::header().
 	 *
+	 * @manonly
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+	 * @endmanonly
 	 */
 	public static function header($header_string, $replace=false) {
 		if (strpos($header_string, 'HTTP/1') !== false) {
@@ -60,7 +62,9 @@ class RouterDev extends Router {
 	/**
 	 * Patched Header::send_cookie().
 	 *
+	 * @manonly
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+	 * @endmanonly
 	 */
 	public static function send_cookie(
 		$name, $value='', $expire=0, $path='', $domain='',
@@ -142,7 +146,9 @@ class RouterDev extends Router {
 	/**
 	 * Custom static file serving for testing.
 	 *
+	 * @manonly
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+	 * @endmanonly
 	 */
 	public function static_file_custom(
 		$path, $cache=0, $disposition=false

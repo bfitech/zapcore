@@ -13,8 +13,10 @@ class CommonDevError extends \Exception {
  * CommonDev class.
  *
  * @todo Non-*nix support.
- * @codeCoverageIgnore
  * @deprecated
+ * @manonly
+ * @codeCoverageIgnore
+ * @endmanonly
  */
 class CommonDev {
 
@@ -28,8 +30,10 @@ class CommonDev {
 	 * @param int $port Server port.
 	 * @return int PID of server process.
 	 *
+	 * @manonly
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
+	 * @endmanonly
 	 */
 	final public static function server_up(
 		$starting_point=null, $port=9999

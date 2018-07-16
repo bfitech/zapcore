@@ -11,7 +11,7 @@ use BFITech\ZapCore\Common;
  * @requires OS Linux
  * @todo Support OSes other than Linux.
  */
-class CoreTest extends TestCase {
+class CommonTest extends TestCase {
 
 	private function bail($msg) {
 		echo "ERROR: $msg\n";
@@ -33,7 +33,8 @@ class CoreTest extends TestCase {
 			$this->bail("/bin/bash not available.");
 		}
 
-		$filebin = $cmn::exec("bash -c 'type -p file'")[0];
+		$filebin = $cmn::exec("bash -c %s 2>/dev/null",
+			["type -p file"])[0];
 
 		foreach ([
 			'xtest.htm'    => ['text/html; charset=utf-8'],

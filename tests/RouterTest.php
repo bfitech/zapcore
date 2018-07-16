@@ -276,8 +276,25 @@ class RouterTest extends TestCase {
 						'error' => 0,
 					],
 				],
+				# intentionally-invalid arg key
+				'trace' => 1,
 			])
 			->route('/test/upload', function($args) use($core){
+				$this->assertEquals('whatever.dat',
+					$args['files']['myfile']['name']);
+			}, 'POST');
+		# mock file upload via global
+		$rdev
+			->request('/test/upload', 'POST', [
+				'post' => ['x' => 'y'],
+			]);
+		$_FILES = [
+			'myfile' => [
+				'name' => 'whatever.dat',
+				'error' => 0,
+			],
+		];
+		$core->route('/test/upload', function($args) use($core){
 				$this->assertEquals('whatever.dat',
 					$args['files']['myfile']['name']);
 			}, 'POST');
@@ -290,18 +307,18 @@ class RouterTest extends TestCase {
 		$rdev
 			->request('/getme/', 'GET', ['get' => ['x' => 'y']])
 			->route('/getme', function($args) use($core){
-			$this->assertEquals($args['get'], ['x' => 'y']);
-			$core::halt("OK");
-		}, ['GET']);
+				$this->assertEquals($args['get'], ['x' => 'y']);
+				$core::halt("OK");
+			}, ['GET']);
 		$this->assertEquals($core->get_request_path(), '/getme');
 		$this->assertEquals($core::$body_raw, 'OK');
 
 		$rdev
 			->request('/getjson/', 'GET', ['get' => ['x' => 'y']])
 			->route('/getjson', function($args) use($core){
-			$this->assertEquals($args['get'], ['x' => 'y']);
-			$core::print_json(0, $args['get']);
-		}, 'GET');
+				$this->assertEquals($args['get'], ['x' => 'y']);
+				$core::print_json(0, $args['get']);
+			}, 'GET');
 		$this->assertEquals($core::$errno, 0);
 		$this->assertEquals($core::$data['x'], 'y');
 	}

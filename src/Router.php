@@ -7,9 +7,10 @@ namespace BFITech\ZapCore;
 /**
  * Router class.
  *
- * Suppress all the PMD warnings in this class.
- *
- * @SuppressWarnings(PHPMD)
+ * @manonly
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @endmanonly
  */
 class Router extends Header {
 
@@ -386,6 +387,7 @@ class Router extends Header {
 	 *
 	 * @manonly
 	 * @SuppressWarnings(PHPMD.ShortVariable)
+	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
 	 * @endmanonly
 	 */
 	final public static function path_parser($path) {
