@@ -133,6 +133,7 @@ class Common {
 	 * @return array A list of the form `[HTTP code, response body]`.
 	 *     HTTP code is -1 for invalid method, 0 for failing connection,
 	 *     and any of standard code for successful connection.
+	 * @codeCoverageIgnore
 	 */
 	public static function http_client($kwargs) {
 		$url = $method = null;
