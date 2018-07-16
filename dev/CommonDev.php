@@ -1,21 +1,20 @@
 <?php
 
 
-namespace BFITech\ZapCoreDev;
+namespace BFITech\ZapCommonDev;
 
 use BFITech\ZapCore\Common;
 
-class CoreDevError extends \Exception {
+class CommonDevError extends \Exception {
 }
 
 
 /**
- * CoreDev class.
+ * CommonDev class.
  *
- * @todo Change class name to CommonDev for consistency.
  * @todo Non-*nix support.
  */
-class CoreDev {
+class CommonDev {
 
 	/**
 	 * Start a test server.
@@ -26,8 +25,10 @@ class CoreDev {
 	 *     directory of a PHP script. Defaults to `pwd`.
 	 * @param int $port Server port.
 	 * @return int PID of server process.
-	 * @todo Port hopping, in case standard test port is already
-	 *     bound to another non-zap service.
+	 * @deprecated
+	 *
+	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+	 * @SuppressWarnings(PHPMD.NPathComplexity)
 	 */
 	final public static function server_up(
 		$starting_point=null, $port=9999
@@ -42,7 +43,7 @@ class CoreDev {
 			} elseif (is_dir($starting_point)) {
 				$dir = realpath($starting_point);
 			} else {
-				throw new CoreDevError(sprintf(
+				throw new CommonDevError(sprintf(
 					"Invalid starting point: '%s'.",
 					$starting_point));
 			}
@@ -50,7 +51,7 @@ class CoreDev {
 
 		$port = (int)$port;
 		if ($port < 0 || $port > 65535)
-			throw new CoreDevError(sprintf(
+			throw new CommonDevError(sprintf(
 				"Invalid port number: '%s'.", $port));
 
 		$srv = 'http://127.0.0.1:' . $port;
@@ -61,7 +62,7 @@ class CoreDev {
 		#     current method. On the server side, root path of
 		#     running server is not necessarily returning 200.
 		if (Common::http_client(['url' => $srv])[0] > 0)
-			throw new CoreDevError(
+			throw new CommonDevError(
 				"Server is running. Kill it with fire.");
 
 		$cmd = PHP_BINARY;
@@ -77,17 +78,17 @@ class CoreDev {
 		$pid = $out[0];
 
 		# wait till it's up
-		$i = 400;
+		$wait = 400;
 		while (1) {
 			if (Common::http_client(['url' => $srv])[0] > 0)
 				return $pid;
 			sleep(0.1);
-			if (--$i <= 0)
+			if (--$wait <= 0)
 				break;
 		}
 
 		# server can't start
-		throw new CoreDevError("Cannot start test server.");
+		throw new CommonDevError("Cannot start test server.");
 	}
 
 	/**
@@ -119,4 +120,5 @@ class CoreDev {
 			mkdir(__TESTDIR__, 0755);
 		return __TESTDIR__;
 	}
+
 }
