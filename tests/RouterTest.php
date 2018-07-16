@@ -6,6 +6,7 @@ use BFITech\ZapCore\Logger;
 use BFITech\ZapCore\Router;
 use BFITech\ZapCommonDev\CommonDev;
 use BFITech\ZapCoreDev\RouterDev;
+use BFITech\ZapCoreDev\RoutingDev;
 
 
 /**
@@ -53,26 +54,27 @@ class RouterTest extends TestCase {
 		# abort 404
 		ob_start();
 		$core = new RouterDefault();
-		$core->route('/s', function(){
-		});
-		$core->shutdown();
+		$core
+			->route('/s', function(){})
+			->shutdown();
 		$rv = ob_get_clean();
 		$this->assertNotEquals(strpos($rv, '404'), false);
+		$core->deinit();
 
 		# redirect
 		ob_start();
-		$core->deinit();
-		$core->route('/', function($args) use($core){
-			$core->redirect('/somewhere_else');
-		});
-		$core->shutdown();
+		$core
+			->route('/', function($args) use($core){
+				$core->redirect('/somewhere_else');
+			})
+			->shutdown();
 		$rv = ob_get_clean();
 		$this->assertNotEquals(
 			strpos($rv, '301 Moved'), false);
+		$core->deinit();
 
 		# send file
 		ob_start();
-		$core->deinit();
 		$core->route('/', function($args) use($core){
 			$core->static_file(__FILE__);
 		});
@@ -105,12 +107,10 @@ class RouterTest extends TestCase {
 			->init();
 		$this->assertEquals($core->get_home(), '/');
 		$this->assertEquals($core->get_host(), 'http://localhost/');
-		$core->deinit()->reset();
 
-		$_POST = ['a' => 1];
-		$_SERVER['REQUEST_URI'] = '/x/X';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$core
+		$rdev = new RoutingDev($core);
+		$rdev
+			->request('/x/X', 'POST', ['post' => ['a' => 1]])
 			->config('home', '/')
 			->route('a', function($args){
 				# invalid path is ignored
@@ -125,23 +125,22 @@ class RouterTest extends TestCase {
 				echo $args['params']['x'];
 			}, 'POST');
 		$this->assertEquals($core::$body_raw, 'X');
-		$core->deinit()->reset();
 
-		$_SERVER['REQUEST_URI'] = '/hello/john';
-		$_SERVER['REQUEST_METHOD'] = 'PATCH';
-		# compound path doesn't match
-		$core->route('/hey/<person>', function($args){
-		});
-		# must call shutdown manually
-		$core->shutdown();
+		$rdev
+			->request('/hello/john', 'PATCH')
+			# compound path doesn't match
+			->route('/hey/<person>', function($args){
+			})
+			# must call shutdown manually
+			->shutdown();
 		# PATCH is never registered in routes, hence 501
 		$this->assertEquals(501, $core::$code);
-		$core->deinit()->reset();
 
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$core->route('/hey/<person>', function($args){
-		});
-		$core->shutdown();
+		$rdev
+			->request('/x/X')
+			->route('/hey/<person>', function($args){
+			})
+			->shutdown();
 		# GET is registered but no route matches, hence 404
 		$this->assertEquals(404, $core::$code);
 	}
@@ -229,23 +228,31 @@ class RouterTest extends TestCase {
 	}
 
 	public function test_route_post() {
-		# mock input
-		$_POST['x'] = 'y';
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_SERVER['REQUEST_URI'] = '/test/z';
-		$_SERVER['HTTP_REFERER'] = 'http://localhost';
 
 		$core = $this->make_router();
-		$this->assertEquals($core->get_request_path(), '/test/z');
 
-		# invalid callback
+		# mock request
+		$rdev = new RoutingDev($core);
+		$rdev->request('/test/z', 'POST', ['post' => ['x' => 'y']]);
+
+		# setting args['header'] via global still works; see below
+		$_SERVER['HTTP_REFERER'] = 'http://localhost';
+
+		# no request path set until $core->route is called at least once
+		$this->assertEquals($core->get_request_path(), null);
+
+		# invalid callback, noop
 		$core->route('/', 'cb');
 		$core->route('/', null);
 
+		# request path is properly set
+		$this->assertEquals($core->get_request_path(), '/test/z');
+
+		# path doesn't match
 		$core->route('/miss', function($args) use($core){
-			# path doesn't match
 		}, ['GET', 'POST']);
 
+		# path matches
 		$core->route('/test/<v1>', function($args) use($core){
 			$this->assertEquals($args['get'], []);
 			$this->assertEquals($core->get_request_path(), '/test/z');
@@ -260,146 +267,146 @@ class RouterTest extends TestCase {
 		}, 'POST');
 
 		# mock file upload
-		$core->deinit()->reset();
-		$_POST['x'] = 'y';
-		$_FILES = [
-			'myfile' => [
-				'name' => 'whatever.dat',
-				'error' => 0,
-			],
-		];
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_SERVER['REQUEST_URI'] = '/test/upload';
-
-		$core->route('/test/upload', function($args) use($core){
-			$this->assertEquals('whatever.dat',
-				$args['files']['myfile']['name']);
-		}, 'POST');
+		$rdev
+			->request('/test/upload', 'POST', [
+				'post' => ['x' => 'y'],
+				'files' => [
+					'myfile' => [
+						'name' => 'whatever.dat',
+						'error' => 0,
+					],
+				],
+			])
+			->route('/test/upload', function($args) use($core){
+				$this->assertEquals('whatever.dat',
+					$args['files']['myfile']['name']);
+			}, 'POST');
 	}
 
 	public function test_route_get() {
-		# mock input; this fake REQUEST_URI can't populate QUERY_STRING
-		$_GET['x'] = 'y';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$_SERVER['REQUEST_URI'] = '/getme/';
-		$_SERVER['HTTP_REFERER'] = 'http://localhost';
-
 		$core = $this->make_router();
-		$core->route('/getme', function($args) use($core){
+		$rdev = new RoutingDev($core);
+
+		$rdev
+			->request('/getme/', 'GET', ['get' => ['x' => 'y']])
+			->route('/getme', function($args) use($core){
 			$this->assertEquals($args['get'], ['x' => 'y']);
 			$core::halt("OK");
 		}, ['GET']);
 		$this->assertEquals($core->get_request_path(), '/getme');
 		$this->assertEquals($core::$body_raw, 'OK');
 
-		$_SERVER['REQUEST_URI'] = '/getjson/';
-		$core = $this->make_router();
-		$core->route('/getjson', function($args) use($core){
+		$rdev
+			->request('/getjson/', 'GET', ['get' => ['x' => 'y']])
+			->route('/getjson', function($args) use($core){
 			$this->assertEquals($args['get'], ['x' => 'y']);
 			$core::print_json(0, $args['get']);
-		}, ['GET']);
+		}, 'GET');
 		$this->assertEquals($core::$errno, 0);
 		$this->assertEquals($core::$data['x'], 'y');
 	}
 
 	public function test_route_patch() {
-		# mock input
-		$_SERVER['REQUEST_METHOD'] = 'PATCH';
-		$_SERVER['REQUEST_URI'] = '/patchme/';
-
 		$core = $this->make_router();
+		$rdev = new RoutingDev($core);
+
+		$rdev
+			->request('/patchme/', 'PATCH',
+				['patch' => 'hello'])
+			->route('/patchme', function($args) use($core){
+				$core::halt($args['patch']);
+			}, ['PATCH'], false);
 		$this->assertEquals($core->get_request_path(), '/patchme');
-		$core->route('/patchme', function($args) use($core){
-			# we can't fake PATCH with globals here
-			$this->assertEquals($core->get_request_path(), '/patchme');
-		}, ['PATCH']);
+		$this->assertEquals($core::$body_raw, "hello");
 	}
 
 	public function test_route_trace() {
-		# mock input
-		$_SERVER['REQUEST_METHOD'] = 'TRACE';
-		$_SERVER['REQUEST_URI'] = '/traceme/';
-
 		$core = $this->make_router();
-		$core->route('/traceme', function($args){
-		}, 'TRACE');
+		$rdev = new RoutingDev($core);
+
+		$rdev
+			->request('/traceme/', 'TRACE')
+			->route('/traceme', function($args){
+			}, 'TRACE');
 		# regardless the request, TRACE will always give 405
 		$this->assertEquals($core::$code, 405);
 	}
 
 	public function test_route_notfound() {
-		# mock input
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$_SERVER['REQUEST_URI'] = '/findme/';
-
 		$core = $this->make_router();
+		$rdev = new RoutingDev($core);
+
+		$rdev->request('/findme/');
+
 		# without this top-level route, $core->shutdown()
-		# will end up with 501
+		# will set 501
 		$core->route('/', function($args){
 		});
+
 		# must invoke shutdown manually since no path matches
 		$core->shutdown();
 		$this->assertEquals($core::$code, 404);
 	}
 
 	public function test_route_static() {
-		# mock input
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$_SERVER['REQUEST_URI'] = '/static/' . basename(__FILE__);
-
 		$core = $this->make_router();
-		$core->route('/static/<path>', function($args) use($core){
-			$core->static_file(__DIR__ . '/' . $args['params']['path']);
-			$this->assertEquals($core::$code, 200);
-			$this->assertEquals(
-				$core::$body_raw, file_get_contents(__FILE__));
-		});
+		$rdev = new RoutingDev($core);
 
-		$_SERVER['REQUEST_URI'] = '/static/notfound.txt';
-		$core = $this->make_router();
-		$core->route('/static/<path>', function($args) use($core){
-			$core->static_file(__DIR__ . '/' . $args['params']['path']);
-		});
+		$rdev
+			->request('/static/' . basename(__FILE__))
+			->route('/static/<path>', function($args) use($core){
+				$core->static_file(
+					__DIR__ . '/' . $args['params']['path']);
+				$this->assertEquals($core::$code, 200);
+				$this->assertEquals(
+					$core::$body_raw, file_get_contents(__FILE__));
+			});
+
+		$rdev
+			->request('/static/notfound.txt')
+			->route('/static/<path>', function($args) use($core){
+				$core->static_file(
+					__DIR__ . '/' . $args['params']['path']);
+			});
 		$this->assertEquals($core::$code, 404);
 	}
 
 	public function test_route_abort() {
-		$_SERVER['REQUEST_URI'] = '/notfound';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-
 		$core = $this->make_router();
-		$core->route('/', function($args) use($core) {
-			echo "This will never be reached.";
-		}, 'GET');
-		# invoke shutdown manually
-		$core->shutdown();
+		$rdev = new RoutingDev($core);
+
+		$rdev
+			->request('/notfound')
+			->route('/', function($args) use($core) {
+				echo "This will never be reached.";
+			}, 'GET')
+			# invoke shutdown manually
+			->shutdown();
 		$this->assertEquals($core::$code, 404);
 
-		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$rdev
+			->request('/notfound', 'POST')
+			->shutdown();
 
-		$core = $this->make_router();
-		$core->route('/', function($args) use($core) {
-			echo "This will never be reached.";
-		}, 'GET');
-		$core->shutdown();
 		# POST is never registered, hence, POST request will give 501
 		$this->assertEquals($core::$code, 501);
 	}
 
 	public function test_route_redirect() {
-		$_SERVER['REQUEST_URI'] = '/redirect';
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-
 		$core = $this->make_router();
-		$core->route('/redirect', function($args) use($core) {
-			$core->redirect('/destination');
-		}, 'GET');
+		$rdev = new RoutingDev($core);
+
+		$rdev
+			->request('/redirect')
+			->route('/redirect', function($args) use($core) {
+				$core->redirect('/destination');
+			}, 'GET');
 		$this->assertEquals($core::$code, 301);
 
-		$core = $this->make_router();
+		# we can reuse the request here
 		$core->route('/redirect', function($args) use($core) {
-			$core->redirect('/destination');
-		}, 'GET');
+				$core->redirect('/destination');
+			}, 'GET');
 		$this->assertTrue(in_array('Location: /destination',
 			$core::$head));
 	}

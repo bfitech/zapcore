@@ -90,8 +90,8 @@ class RouterDev extends Router {
 	 */
 	public function wrap_callback($callback, $args=[]) {
 		ob_start();
-		if (self::$override_args)
-			$args = self::$override_args;
+		foreach (self::$override_args as $key => $val)
+			$args[$key] = $val;
 		$callback($args);
 		self::$body_raw = ob_get_clean();
 		self::$body = json_decode(self::$body_raw, true);
@@ -108,7 +108,13 @@ class RouterDev extends Router {
 	 * Overrides callback args.
 	 */
 	public function override_callback_args($args=[]) {
-		self::$override_args = $args;
+		foreach ($args as $key => $val) {
+			if (!in_array($key, [
+				'get', 'post', 'files', 'put', 'patch', 'delete',
+			]))
+				continue;
+			self::$override_args[$key] = $val;
+		}
 	}
 
 	/**
@@ -161,6 +167,8 @@ class RouterDev extends Router {
  *
  * Use this class to instantiate a router and perform requests on it
  * without manually manipulating HTTP variables.
+ *
+ * Pardon the class name. It's one of hard problems in CS. :\
  */
 class RoutingDev {
 
@@ -187,9 +195,10 @@ class RoutingDev {
 	 *
 	 * @param string $request_uri Simulated request URI.
 	 * @param string $request_method Simulated request method.
-	 * @param array $args Simulated callback args. This includes
-	 *     request headers.
+	 * @param array $args Simulated callback args.
 	 * @param array $cookie Simulated cookies.
+	 * @return RouterDev instance, useful for chaining from this method
+	 *     to $core->route().
 	 */
 	public function request(
 		$request_uri=null, $request_method='GET', $args=[], $cookie=[]
@@ -202,7 +211,7 @@ class RoutingDev {
 		$_COOKIE = $cookie;
 		if ($args)
 			self::$core->override_callback_args($args);
-		return $this;
+		return self::$core;
 	}
 
 }
