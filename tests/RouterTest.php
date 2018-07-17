@@ -155,26 +155,30 @@ class RouterTest extends TestCase {
 		$this->assertEquals($rv[1], []);
 
 		# short var
-		$rv = $core->path_parser('/x/<v1>/y/<v2>/z');
+		$rv = $core->path_parser('/@x/<v1>/y/<v2>/z');
 		$this->assertSame($rv[1], ['v1', 'v2']);
 
 		# long var
-		$rv = $core->path_parser('/x/<v1>/y/{v2}/z');
+		$rv = $core->path_parser('/x/<v1>/y/{v2}/1:z');
 		$this->assertSame($rv[1], ['v1', 'v2']);
 
-		// @fixme This shouldn't happen. __(y{v2}) != __(y/{v2})
+		# dynamic path not well-formed
 		$rv = $core->path_parser('/x/<v1>/y{v2}/z');
-		$this->assertSame($rv[1], ['v1', 'v2']);
+		$this->assertSame($rv, [[], []]);
+
+		# invalid param key
+		$rv1 = $core->path_parser('/X/<12>/{w2}/z');
+		$rv2 = $core->path_parser('/X/p/{w2}/<z@>');
+		$this->assertSame($rv1, $rv2);
 
 		# illegal character
-		$rv = $core->path_parser('/x/<v1>/!{v2}/z');
-		$this->assertSame($rv[0], []);
-		$this->assertSame($rv[1], []);
+		$rv1 = $core->path_parser('/x/<v1>/!/{v2}/z');
+		$rv2 = $core->path_parser('/x/<v1>/!{v2}/z');
+		$this->assertSame($rv1, $rv2);
 
 		# key reuse
 		$rv = $core->path_parser('/x/<v1>/y/{v1}/z');
-		$this->assertSame($rv[0], []);
-		$this->assertSame($rv[1], []);
+		$this->assertSame($rv, [[], []]);
 	}
 
 	public function test_config() {

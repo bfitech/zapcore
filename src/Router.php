@@ -386,62 +386,91 @@ class Router extends Header {
 	 * @see Router::route for usage.
 	 *
 	 * @manonly
-	 * @SuppressWarnings(PHPMD.ShortVariable)
+	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+	 * @SuppressWarnings(PHPMD.NPathComplexity)
 	 * @endmanonly
 	 */
 	final public static function path_parser($path) {
-		$valid_chars = 'a-zA-Z0-9\_\.\-@%';
+		# allowed characters in path
+		$valid_chars = 'a-zA-Z0-9\_\.\-@%:';
+		# param left delimiter
+		$elf = '<\{';
+		# param right delimiter
+		$erg = '>\}';
+		# param delimiter
+		$delims = "\/${elf}${erg}";
+		# non-delimiter
+		$non_delims = "[^${delims}]";
+		# valid param key
+		$valid_key = "[a-z][a-z0-9\_]*";
 
-		$valid_chardelims = $valid_chars . '\/<>\{\}';
-		if (!preg_match('!^[' . $valid_chardelims . ']+$!', $path)) {
-			# never allow invalid characters
-			self::$logger->error("Router: path invalid: '$path'.");
+		if (!preg_match("!^[${valid_chars}${delims}]+$!", $path)) {
+			# invalid characters
+			self::$logger->error(
+				"Router: invalid characters in path: '$path'.");
 			return [[], []];
 		}
 
-		preg_match_all(
-			'!(' .
-				'<[a-zA-Z][a-zA-Z0-9\_]*>' .
-			'|' .
-				'\{[a-zA-Z][a-zA-Z0-9\_/]*\}' .
-			')!',
-			$path, $tokens, PREG_OFFSET_CAPTURE);
+		if (
+			preg_match("!${non_delims}[${elf}]!", $path) ||
+			preg_match("![${erg}]${non_delims}!", $path)
+		) {
+			# invalid dynamic path pattern
+			self::$logger->error(
+				"Router: dynamic path not well-formed: '$path'.");
+			return [[], []];
+		}
+
+		preg_match_all("!/([$elf][^$erg]+[$erg])!", $path, $tokens,
+			PREG_OFFSET_CAPTURE);
 
 		$keys = $symbols = [];
-		foreach ($tokens[0] as $t) {
-			$keys[] = str_replace(['{','}','<','>'], '', $t[0]);
+		foreach ($tokens[1] as $token) {
+
+			$key = str_replace(['{','}','<','>'], '', $token[0]);
+			if (!preg_match("!^${valid_key}\$!i", $key)) {
+				# invalid param key
+				self::$logger->error(
+					"Router: invalid param key: '$path'.");
+				return [[], []];
+			}
+
+			$keys[] = $key;
 			$replacement = $valid_chars;
-			if (strpos($t[0], '{') !== false)
+			if (strpos($token[0], '{') !== false)
 				$replacement .= '/';
 			$replacement = '([' . $replacement . ']+)';
-			$symbols[] = [$replacement, $t[1], strlen($t[0])];
+			$symbols[] = [$replacement, $token[1], strlen($token[0])];
 		}
+
 		if (count($keys) > count(array_unique($keys))) {
 			# never allow key reuse to prevent unexpected overrides
-			self::$logger->error("Router: param keys reused: '$path'.");
+			self::$logger->error("Router: param key reused: '$path'.");
 			return [[], []];
 		}
 
+		# construct regex pattern for all capturing keys
+		$idx = 0;
 		$pattern = '';
-		$n = 0;
-		while ($n < strlen($path)) {
+		while ($idx < strlen($path)) {
 			$matched = false;
-			foreach ($symbols as $s) {
-				if ($n < $s[1])
+			foreach ($symbols as $symbol) {
+				if ($idx < $symbol[1])
 					continue;
-				if ($n == $s[1]) {
+				if ($idx == $symbol[1]) {
 					$matched = true;
-					$pattern .= $s[0];
-					$n++;
-					$n += $s[2] - 1;
+					$pattern .= $symbol[0];
+					$idx++;
+					$idx += $symbol[2] - 1;
 				}
 			}
 			if (!$matched) {
-				$pattern .= $path[$n];
-				$n++;
+				$pattern .= $path[$idx];
+				$idx++;
 			}
 		}
+
 		return [$pattern, $keys];
 	}
 
