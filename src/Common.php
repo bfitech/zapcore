@@ -25,7 +25,7 @@ class Common {
 	 *     placeholders in command.
 	 * @return bool|array False on failure, stdout lines otherwise.
 	 */
-	final public static function exec($cmd, $args=[]) {
+	final public static function exec(string $cmd, array $args=[]) {
 		foreach ($args as $key => $val)
 			$args[$key] = escapeshellarg($val);
 		$cmd = vsprintf($cmd, $args);
@@ -44,7 +44,7 @@ class Common {
 	 * @return string The MIME type or application/octet-stream.
 	 */
 	final public static function get_mimetype(
-		$fname, $path_to_file=null
+		string $fname, string $path_to_file=null
 	) {
 
 		if (null === $mime = self::_mime_extension($fname))
@@ -58,7 +58,7 @@ class Common {
 	 * Useful for serving typical text files that don't have unique
 	 * magic numbers.
 	 */
-	private static function _mime_extension($fname) {
+	private static function _mime_extension(string $fname) {
 		$pinfo = pathinfo($fname);
 		// @codeCoverageIgnoreStart
 		if (!isset($pinfo['extension']))
@@ -84,7 +84,9 @@ class Common {
 	/**
 	 * Get MIME type with `mime_content_type` or `file`.
 	 */
-	private static function _mime_magic($fname, $path_to_file=null) {
+	private static function _mime_magic(
+		string $fname, string $path_to_file=null
+	) {
 		# with builtin
 		if (
 			function_exists('mime_content_type') &&
@@ -145,7 +147,7 @@ class Common {
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
 	 * @endmanonly
 	 */
-	public static function http_client($kwargs) {
+	public static function http_client(array $kwargs) {
 		$url = $method = null;
 		$headers = $get = $post = $custom_opts = [];
 		$expect_json = false;
@@ -232,7 +234,7 @@ class Common {
 	 * @return bool|array False on failure, filtered dict otherwise.
 	 */
 	final public static function check_dict(
-		$array, $keys, $trim=false
+		array $array, array $keys, bool $trim=false
 	) {
 		$checked = [];
 		foreach ($keys as $key) {
@@ -262,7 +264,7 @@ class Common {
 	 * @return bool|array False on failure, filtered dict otherwise.
 	 */
 	final public static function check_idict(
-		$array, $keys, $trim=false
+		array $array, array $keys, bool $trim=false
 	) {
 		if (false === $array = self::check_dict($array, $keys, $trim))
 			return false;
@@ -286,7 +288,7 @@ class Common {
 	 * @return array A complete array ready to be extract()ed.
 	 */
 	final public static function extract_kwargs(
-		$input_array, $init_array
+		array $input_array, array $init_array
 	) {
 		foreach (array_keys($init_array) as $key) {
 			if (isset($input_array[$key]))
