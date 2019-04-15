@@ -73,7 +73,7 @@ class Header {
 	 * @return array A dict containing code and message if
 	 *     `$code` is valid, 404 dict otherwise.
 	 */
-	final public static function get_header_string($code) {
+	final public static function get_header_string(int $code) {
 		if (!isset(self::$header_string[$code]))
 			$code = 404;
 		return [
@@ -147,7 +147,7 @@ class Header {
 	 * @param array $headers Additional headers.
 	 */
 	public static function start_header(
-		$code=200, $cache=0, $headers=[]
+		int $code=200, int $cache=0, array $headers=[]
 	) {
 		$msg = 'OK';
 		extract(self::get_header_string($code));
@@ -202,9 +202,9 @@ class Header {
 	 *     just immediately halt.
 	 */
 	public static function send_file(
-		$fpath, $disposition=null, $code=200, $cache=0,
-		$headers=[], $xsendfile_header=null,
-		$callback_notfound=null
+		string $fpath, $disposition=null, int $code=200, int $cache=0,
+		array $headers=[], $xsendfile_header=null,
+		callable $callback_notfound=null
 	) {
 
 		if (!file_exists($fpath) || is_dir($fpath)) {
@@ -249,7 +249,7 @@ class Header {
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 */
 	final public static function print_json(
-		$errno=0, $data=[], $http_code=200, $cache=0
+		int $errno=0, $data=[], int $http_code=200, int $cache=0
 	) {
 		$json = json_encode(compact('errno', 'data'));
 		self::start_header($http_code, $cache, [
@@ -275,7 +275,7 @@ class Header {
 	 * @endmanonly
 	 */
 	final public static function pj(
-		$retval, $forbidden_code=null, $cache=0
+		$retval, int $forbidden_code=null, int $cache=0
 	) {
 		$http_code = 200;
 		if (!is_array($retval)) {
