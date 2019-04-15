@@ -44,7 +44,8 @@ class Router extends Header {
 	 *     class.
 	 */
 	public function __construct(
-		$home=null, $host=null, $shutdown=true, Logger $logger=null
+		stringe $home=null, string $host=null, bool $shutdown=true,
+		Logger $logger=null
 	) {
 		self::$logger = $logger ? $logger : new Logger();
 		self::$logger->debug('Router: started.');
@@ -66,7 +67,7 @@ class Router extends Header {
 	/**
 	 * Host configuration validation.
 	 */
-	private function config_host($host) {
+	private function config_host(string $host=null) {
 		if (filter_var($host, FILTER_VALIDATE_URL,
 				FILTER_FLAG_PATH_REQUIRED) === false)
 			return;
@@ -91,7 +92,7 @@ class Router extends Header {
 	 * @param string $key Configuration key.
 	 * @param mixed $val Configuration value.
 	 */
-	final public function config($key, $val) {
+	final public function config(string $key, $val) {
 		if ($this->request_initted)
 			return $this;
 		switch ($key) {
@@ -211,7 +212,7 @@ class Router extends Header {
 	 *
 	 * @codeCoverageIgnore
 	 */
-	private function verify_port($port, $proto) {
+	private function verify_port(int $port=null, string $proto) {
 		if (!$port)
 			return $port;
 		if ($port < 0 || $port > pow(2, 16))
@@ -297,7 +298,7 @@ class Router extends Header {
 	 *     $args['params'] of router callback, which is empty in case
 	 *     of non-compound route path.
 	 */
-	private function parse_request_path($path) {
+	private function parse_request_path(string $path) {
 
 		# route path and request path is the same
 		if ($path == $this->request_path)
@@ -328,8 +329,9 @@ class Router extends Header {
 	 * @param bool $is_raw If true, request body is not treated as
 	 *     HTTP query. Applicable for POST only.
 	 */
-	private function execute_callback($callback, $args, $is_raw=null) {
-
+	private function execute_callback(
+		callable $callback, array $args, bool $is_raw=null
+	) {
 		$method = strtolower($this->request_method);
 
 		if (in_array($method, ['head', 'get', 'options']))
@@ -362,7 +364,9 @@ class Router extends Header {
 	/**
 	 * Finish callback.
 	 */
-	private function finish_callback($callback, $args) {
+	private function finish_callback(
+		callable $callback, array $args
+	) {
 		$this->request_handled = true;
 		$this->wrap_callback($callback, $args);
 		return $this;
@@ -391,7 +395,7 @@ class Router extends Header {
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
 	 * @endmanonly
 	 */
-	final public static function path_parser($path) {
+	final public static function path_parser(string $path) {
 		# allowed characters in path
 		$valid_chars = 'a-zA-Z0-9\_\.\-@%:';
 		# param left delimiter
@@ -502,7 +506,7 @@ class Router extends Header {
 	 * @return object|mixed Router instance for easier chaining.
 	 */
 	final public function route(
-		$path, $callback, $method='GET', $is_raw=null
+		string $path, $callback, $method='GET', bool $is_raw=null
 	) {
 
 		# route always initializes
@@ -605,7 +609,7 @@ class Router extends Header {
 	 *
 	 * @param int $code HTTP error code.
 	 */
-	final public function abort($code) {
+	final public function abort(int $code) {
 		$this->request_handled = true;
 		self::$logger->info(sprintf(
 			"Router: abort %s: '%s'.",
@@ -620,7 +624,7 @@ class Router extends Header {
 	/**
 	 * Default redirect.
 	 */
-	private function redirect_default($destination) {
+	private function redirect_default(string $destination) {
 		extract(self::get_header_string(301));
 		static::start_header($code, 0, [
 			"Location: $destination",
@@ -659,7 +663,7 @@ class Router extends Header {
 	 *
 	 * @param string $destination Destination URL.
 	 */
-	final public function redirect($destination) {
+	final public function redirect(string $destination) {
 		$this->request_handled = true;
 		self::$logger->info(sprintf(
 			"Router: redirect: '%s' -> '%s'.",
@@ -675,7 +679,7 @@ class Router extends Header {
 	 * Default static file.
 	 */
 	private function static_file_default(
-		$path, $cache=0, $disposition=null
+		string $path, int $cache=0, string $disposition=null
 	) {
 		if (file_exists($path))
 			static::send_file($path, $disposition, 200, $cache);
@@ -695,7 +699,7 @@ class Router extends Header {
 	 *     no content-disposition header will be sent.
 	 */
 	final public function static_file(
-		$path, $cache=0, $disposition=null
+		string $path, int $cache=0, string $disposition=null
 	) {
 		self::$logger->info("Router: static: '$path'.");
 		if (!method_exists($this, 'static_file_custom'))
@@ -760,7 +764,7 @@ class Router extends Header {
 	 *     component array is returned. Otherwise, indexed element
 	 *     is returned or null if index falls out of range.
 	 */
-	public function get_request_comp($index=null) {
+	public function get_request_comp(int $index=null) {
 		$comp = $this->request_comp;
 		if ($index === null)
 			return $comp;
