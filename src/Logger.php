@@ -31,7 +31,9 @@ class Logger {
 	 * @param resource $handle Log file handle. $path is ignored if this
 	 *     is not null.
 	 */
-	public function __construct($level=null, $path=null, $handle=null) {
+	public function __construct(
+		$level=null, string $path=null, $handle=null
+	) {
 		$this->level = intval($level);
 		if (!$this->level)
 			$this->level = self::ERROR;
@@ -58,7 +60,9 @@ class Logger {
 	 * @param string $msg Error message.
 	 * @return string Formatted line.
 	 */
-	protected function format($timestamp, $level, $msg) {
+	protected function format(
+		string $timestamp, $level, string $msg
+	) {
 		$fmt = "[%s] %s: %s\n";
 		return sprintf($fmt, $timestamp, $level, $msg);
 	}
@@ -67,7 +71,7 @@ class Logger {
 	 * Write lines as single line, with tab, CR and LF written
 	 * symbolically.
 	 */
-	private function one_line($msg) {
+	private function one_line(string $msg) {
 		$msg = trim($msg);
 		$msg = str_replace([
 			"\t", "\n", "\r",
@@ -100,7 +104,7 @@ class Logger {
 	/**
 	 * Write to handle.
 	 */
-	private function write($level, $msg) {
+	private function write($level, string $msg) {
 		if (!$this->is_active)
 			return;
 		$timestamp = gmdate(\DateTime::ATOM);
@@ -121,7 +125,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function debug($msg) {
+	public function debug(string $msg) {
 		if ($this->level > self::DEBUG)
 			return;
 		$this->write('DEB', $msg);
@@ -132,7 +136,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function info($msg) {
+	public function info(string $msg) {
 		if ($this->level > self::INFO)
 			return;
 		$this->write('INF', $msg);
@@ -143,7 +147,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function warning($msg) {
+	public function warning(string $msg) {
 		if ($this->level > self::WARNING)
 			return;
 		$this->write('WRN', $msg);
@@ -154,7 +158,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function error($msg) {
+	public function error(string $msg) {
 		$this->write('ERR', $msg);
 	}
 
