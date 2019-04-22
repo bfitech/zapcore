@@ -2,27 +2,6 @@
 <ruleset name="BFITech">
 	<description>BFITech PHP Coding Convention.</description>
 
-	<!-- source -->
-	<file>src</file>
-
-	<!-- configuration -->
-	<!-- * config set -->
-	<!--   + only process PHP -->
-	<arg name="extensions" value="php"/>
-	<!--   + max report width -->
-	<arg name="report-width" value="72"/>
-	<!--   + tab width -->
-	<arg name="tab-width" value="4"/>
-	<!--   + do not cache -->
-	<arg name="no-cache"/>
-	<!--   + show warnings -->
-	<arg value="w"/>
-	<!-- * ini set -->
-	<ini name="memory_limit" value="32M"/>
-	<!-- * runtime set -->
-	<!--   + retcode=0 on warnings -->
-	<config name="ignore_warnings_on_exit" value="1"/>
-
 	<!-- exceptions -->
 	<rule>
 		<!-- no camel case for method names -->
@@ -32,6 +11,7 @@
 	</rule>
 
 	<!-- tabs for indentation -->
+	<arg name="tab-width" value="4"/>
 	<rule ref="Generic.WhiteSpace.DisallowSpaceIndent"/>
 	<rule ref="Generic.WhiteSpace.ScopeIndent">
 		<properties>
@@ -68,7 +48,7 @@
 			<property name="lineLimit" value="72"/>
 			<!-- disable absolute to always invoke warning as in some
 				 cases, exceeding the limit is unavoidable -->
-			<property name="absoluteLineLimit" value="0"/>
+			<property name="absoluteLineLimit" value="72"/>
 		</properties>
 	</rule>
 
@@ -121,9 +101,6 @@
 			<property name="equalsSpacing" value="0" />
 		</properties>
 	</rule>
-
-	<!-- cyclo, no NPath sniff so far -->
-	<rule ref="Generic.Metrics.CyclomaticComplexity"/>
 
 	<!-- nesting -->
 	<rule ref="Generic.Metrics.NestingLevel">
