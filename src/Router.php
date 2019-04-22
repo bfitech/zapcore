@@ -44,7 +44,7 @@ class Router extends Header {
 	 *     class.
 	 */
 	public function __construct(
-		stringe $home=null, string $host=null, bool $shutdown=true,
+		string $home=null, string $host=null, bool $shutdown=true,
 		Logger $logger=null
 	) {
 		self::$logger = $logger ? $logger : new Logger();
