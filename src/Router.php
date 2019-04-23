@@ -7,10 +7,8 @@ namespace BFITech\ZapCore;
 /**
  * Router class.
  *
- * @manonly
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
- * @endmanonly
  */
 class Router extends Header {
 
@@ -33,25 +31,14 @@ class Router extends Header {
 	/**
 	 * Constructor.
 	 *
-	 * @param string|null $home Override home path autodetection if
-	 *     it's a string.
-	 * @param string|null $host Override host path autodetection if
-	 *     it's a string.
-	 * @param bool $shutdown Whether shutdown function should be
-	 *     invoked at the end. Useful for multiple routers in one
-	 *     project.
+	 * To finetune properties, use Router->config().
+	 *
 	 * @param Logger $logger Logging service, an instance of Logger
-	 *     class.
+	 *     class. Can also be set via Router->config().
 	 */
-	public function __construct(
-		string $home=null, string $host=null, bool $shutdown=true,
-		Logger $logger=null
-	) {
+	public function __construct(Logger $logger=null) {
 		self::$logger = $logger ? $logger : new Logger();
 		self::$logger->debug('Router: started.');
-		$this->config_home($home);
-		$this->config_host($host);
-		$this->auto_shutdown = $shutdown;
 	}
 
 	/**
@@ -138,8 +125,7 @@ class Router extends Header {
 	 * Reset properties to default values.
 	 *
 	 * Mostly useful for testing, so that you don't have to repeatedly
-	 * instantiate the object, especially when constructor parameters
-	 * are considerably verbose.
+	 * instantiate the object.
 	 */
 	final public function deinit() {
 		$this->request_path = null;
@@ -389,11 +375,9 @@ class Router extends Header {
 	 *       regex
 	 * @see Router::route for usage.
 	 *
-	 * @manonly
 	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
-	 * @endmanonly
 	 */
 	final public static function path_parser(string $path) {
 		# allowed characters in path

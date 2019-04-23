@@ -6,6 +6,8 @@
 *.conf
 *.ini
 *.sq3
+*.orig
+
 .htaccess
 composer.lock
 *config.php
