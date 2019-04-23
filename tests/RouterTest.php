@@ -245,16 +245,11 @@ class RouterTest extends TestCase {
 		# no request path set until $core->route is called at least once
 		$this->assertEquals($core->get_request_path(), null);
 
-		# invalid callback, noop
-		$core->route('/', 'cb');
-		$core->route('/', null);
-
-		# request path is properly set
-		$this->assertEquals($core->get_request_path(), '/test/z');
-
 		# path doesn't match
 		$core->route('/miss', function($args) use($core){
 		}, ['GET', 'POST']);
+		# request path is properly set
+		$this->assertEquals($core->get_request_path(), '/test/z');
 
 		# path matches
 		$core->route('/test/<v1>', function($args) use($core){

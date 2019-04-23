@@ -56,7 +56,7 @@ class Logger {
 	 * information.
 	 *
 	 * @param string $timestamp Timestamp, always in UTC ISO-8601.
-	 * @param int $level Log level of current log event.
+	 * @param int $level String representation of current log level.
 	 * @param string $msg Error message.
 	 * @return string Formatted line.
 	 */

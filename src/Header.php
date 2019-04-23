@@ -108,9 +108,9 @@ class Header {
 	 *     etc. Use with care.
 	 * @codeCoverageIgnore
 	 *
-	 * @manonly
+	 * @cond
 	 * @SuppressWarnings(PHPMD.ExitExpression)
-	 * @endmanonly
+	 * @endcond
 	 */
 	public static function halt($arg=null) {
 		if ($arg === null)
@@ -249,7 +249,7 @@ class Header {
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 */
 	final public static function print_json(
-		int $errno=0, $data=[], int $http_code=200, int $cache=0
+		int $errno=0, $data=null, int $http_code=200, int $cache=0
 	) {
 		$json = json_encode(compact('errno', 'data'));
 		self::start_header($http_code, $cache, [
@@ -270,9 +270,9 @@ class Header {
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 * @see Header::print_json.
 	 *
-	 * @manonly
+	 * @cond
 	 * @SuppressWarnings(PHPMD.ShortMethodName)
-	 * @endmanonly
+	 * @endcond
 	 */
 	final public static function pj(
 		$retval, int $forbidden_code=null, int $cache=0

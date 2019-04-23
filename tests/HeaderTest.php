@@ -87,7 +87,7 @@ class HeaderTest extends TestCase {
 			$hdr::$head, 'Content-Type: application/json'));
 		$this->assertEquals($hdr::$code, 200);
 		$this->assertEquals($errno, 0);
-		$this->assertSame($data, []);
+		$this->assertSame($data, null);
 	}
 
 	public function test_pj() {

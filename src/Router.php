@@ -7,8 +7,10 @@ namespace BFITech\ZapCore;
 /**
  * Router class.
  *
+ * @cond
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @endcond
  */
 class Router extends Header {
 
@@ -373,11 +375,13 @@ class Router extends Header {
 	 *     - an array containing keys that will be used to create
 	 *       dynamic variables with whatever matches the previous
 	 *       regex
-	 * @see Router::route for usage.
+	 * @see Router::route() for usage.
 	 *
+	 * @if HIDDEN
 	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
+	 * @endif
 	 */
 	final public static function path_parser(string $path) {
 		# allowed characters in path
@@ -490,7 +494,8 @@ class Router extends Header {
 	 * @return object|mixed Router instance for easier chaining.
 	 */
 	final public function route(
-		string $path, $callback, $method='GET', bool $is_raw=null
+		string $path, callable $callback, $method='GET',
+		bool $is_raw=null
 	) {
 
 		# route always initializes
@@ -509,13 +514,6 @@ class Router extends Header {
 		if ($path != '/')
 			# ignore trailing slash
 			$path = rtrim($path, '/');
-
-		# verify callback
-		if (!is_callable($callback)) {
-			self::$logger->error(
-				"Router: callback invalid in '$path'.");
-			return $this;
-		}
 
 		# verify route method
 		if (!$this->verify_route_method($method))
