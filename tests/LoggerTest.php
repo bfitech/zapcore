@@ -3,7 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
-use BFITech\ZapCommonDev\CommonDev;
+use BFITech\ZapCoreDev\RouterDev;
 
 
 class LoggerTest extends TestCase {
@@ -11,7 +11,7 @@ class LoggerTest extends TestCase {
 	public static $flogs = [];
 
 	public static function setUpBeforeClass() {
-		CommonDev::testdir(__FILE__);
+		RouterDev::testdir();
 	}
 
 	public static function tearDownAfterClass() {
@@ -28,7 +28,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_constructor() {
-		$fl = __TESTDIR__ . '/zapcore-logger-test-00.log';
+		$fl = __ZAPTESTDIR__ . '/zapcore-logger-test-00.log';
 		self::$flogs[] = $fl;
 
 		$logger = new Logger('a', $fl);
@@ -40,7 +40,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_logger_write() {
-		$fl = __TESTDIR__ . '/zapcore-logger-test-01.log';
+		$fl = __ZAPTESTDIR__ . '/zapcore-logger-test-01.log';
 		self::$flogs[] = $fl;
 
 		$logger = new Logger(Logger::INFO, $fl);
@@ -62,7 +62,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_logger_io() {
-		$_fl = __TESTDIR__ . '/zapcore-logger-test-';
+		$_fl = __ZAPTESTDIR__ . '/zapcore-logger-test-';
 
 		$fl2 = $_fl . '02.log';
 		self::$flogs[] = $fl2;

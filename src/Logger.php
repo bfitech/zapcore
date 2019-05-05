@@ -29,6 +29,7 @@ class Logger {
 	 * @param string $path Path to log file. If null, stderr is used.
 	 * @param resource $handle Log file handle. $path is ignored if this
 	 *     is not null.
+	 * @todo Write to syslog.
 	 */
 	public function __construct(
 		$level=null, string $path=null, $handle=null
