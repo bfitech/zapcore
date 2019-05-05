@@ -4,6 +4,7 @@
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCore\Router;
+use BFITech\ZapCore\RouterError;
 use BFITech\ZapCoreDev\RouterDev;
 use BFITech\ZapCoreDev\RoutingDev;
 
@@ -110,9 +111,6 @@ class RouterTest extends TestCase {
 		$rdev
 			->request('/x/X', 'POST', ['post' => ['a' => 1]])
 			->config('home', '/')
-			->route('a', function($args){
-				# invalid path is ignored
-			}, 'POST')
 			->route('/x/<x>', function($args) use($core){
 				$this->assertEquals($core->get_request_path(), '/x/X');
 				echo $args['params']['x'];
@@ -143,13 +141,16 @@ class RouterTest extends TestCase {
 		$this->assertEquals(404, $core::$code);
 	}
 
+	private function make_parser() {
+		return (new RouterDev)->config('logger', self::$logger);
+	}
+
 	public function test_path_parser() {
-		$core = (new RouterDev)
-			->config('logger', self::$logger);
+		$core = $this->make_parser();
 
 		# regular
 		$rv = $core->path_parser('/x/y/');
-		$this->assertEquals($rv[0], '/x/y/');
+		$this->assertEquals($rv[0], '/x/y');
 		$this->assertEquals($rv[1], []);
 
 		# short var
@@ -159,24 +160,31 @@ class RouterTest extends TestCase {
 		# long var
 		$rv = $core->path_parser('/x/<v1>/y/{v2}/1:z');
 		$this->assertSame($rv[1], ['v1', 'v2']);
+	}
 
-		# dynamic path not well-formed
-		$rv = $core->path_parser('/x/<v1>/y{v2}/z');
-		$this->assertSame($rv, [[], []]);
+	public function test_path_parser_invalid_path() {
+		$this->expectException(RouterError::class);
+		$this->make_parser()->path_parser('a');
+	}
 
-		# invalid param key
-		$rv1 = $core->path_parser('/X/<12>/{w2}/z');
-		$rv2 = $core->path_parser('/X/p/{w2}/<z@>');
-		$this->assertSame($rv1, $rv2);
+	public function test_path_parser_invalid_dynamic_path() {
+		$this->expectException(RouterError::class);
+		$this->make_parser()->path_parser('/x/<v1>/y{v2}/z');
+	}
 
-		# illegal character
-		$rv1 = $core->path_parser('/x/<v1>/!/{v2}/z');
-		$rv2 = $core->path_parser('/x/<v1>/!{v2}/z');
-		$this->assertSame($rv1, $rv2);
+	public function test_path_parser_invalid_key() {
+		$this->expectException(RouterError::class);
+		$this->make_parser()->path_parser('/X/<12>/{w2}/z');
+	}
 
-		# key reuse
-		$rv = $core->path_parser('/x/<v1>/y/{v1}/z');
-		$this->assertSame($rv, [[], []]);
+	public function test_path_parser_illegal_char() {
+		$this->expectException(RouterError::class);
+		$this->make_parser()->path_parser('/x/<v1>/!/{v2}/z');
+	}
+
+	public function test_path_parser_key_reuse() {
+		$this->expectException(RouterError::class);
+		$this->make_parser()->path_parser('/x/<v1>/y/{v1}/z');
 	}
 
 	public function test_config() {

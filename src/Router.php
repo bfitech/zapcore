@@ -4,6 +4,9 @@
 namespace BFITech\ZapCore;
 
 
+class RouterError extends \Exception {
+}
+
 /**
  * Router class.
  *
@@ -361,6 +364,14 @@ class Router extends Header {
 	}
 
 	/**
+	 * Write to log and throw exception on error.
+	 */
+	private static function throw_error(string $msg) {
+		self::$logger->error($msg);
+		throw new RouterError($msg);
+	}
+
+	/**
 	 * Path parser.
 	 *
 	 * This parses route path and returns arrays that will parse
@@ -377,13 +388,22 @@ class Router extends Header {
 	 *       regex
 	 * @see Router::route() for usage.
 	 *
-	 * @if HIDDEN
+	 * @if TRUE
 	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
 	 * @endif
 	 */
 	final public static function path_parser(string $path) {
+		# path must start with slash
+		if ($path[0] != '/') {
+			self::throw_error(
+				"Router: path invalid in '$path'.");
+		}
+		# ignore trailing slash
+		if ($path != '/')
+			$path = rtrim($path, '/');
+
 		# allowed characters in path
 		$valid_chars = 'a-zA-Z0-9\_\.\-@%:';
 		# param left delimiter
@@ -399,9 +419,8 @@ class Router extends Header {
 
 		if (!preg_match("!^[${valid_chars}${delims}]+$!", $path)) {
 			# invalid characters
-			self::$logger->error(
+			self::throw_error(
 				"Router: invalid characters in path: '$path'.");
-			return [[], []];
 		}
 
 		if (
@@ -409,9 +428,8 @@ class Router extends Header {
 			preg_match("![${erg}]${non_delims}!", $path)
 		) {
 			# invalid dynamic path pattern
-			self::$logger->error(
+			self::throw_error(
 				"Router: dynamic path not well-formed: '$path'.");
-			return [[], []];
 		}
 
 		preg_match_all("!/([$elf][^$erg]+[$erg])!", $path, $tokens,
@@ -423,9 +441,8 @@ class Router extends Header {
 			$key = str_replace(['{','}','<','>'], '', $token[0]);
 			if (!preg_match("!^${valid_key}\$!i", $key)) {
 				# invalid param key
-				self::$logger->error(
+				self::throw_error(
 					"Router: invalid param key: '$path'.");
-				return [[], []];
 			}
 
 			$keys[] = $key;
@@ -438,8 +455,7 @@ class Router extends Header {
 
 		if (count($keys) > count(array_unique($keys))) {
 			# never allow key reuse to prevent unexpected overrides
-			self::$logger->error("Router: param key reused: '$path'.");
-			return [[], []];
+			self::throw_error("Router: param key reused: '$path'.");
 		}
 
 		# construct regex pattern for all capturing keys
@@ -476,7 +492,7 @@ class Router extends Header {
 	 * @param array $args HTTP variables collected by router.
 	 */
 	public function wrap_callback(callable $callback, array $args=[]) {
-		self::$logger->info(sprintf("Router: %s '%s'.",
+		self::$logger->debug(sprintf("Router: %s '%s'.",
 			$this->request_method, $this->request_path));
 		$callback($args);
 		static::halt();
@@ -507,16 +523,6 @@ class Router extends Header {
 		# check if request has been handled
 		if ($this->request_handled)
 			return $this;
-
-		# verify path
-		if ($path[0] != '/') {
-			self::$logger->error(
-				"Router: path invalid in '$path'.");
-			return $this;
-		}
-		if ($path != '/')
-			# ignore trailing slash
-			$path = rtrim($path, '/');
 
 		# verify route method
 		if (!$this->verify_route_method($method))
@@ -743,11 +749,11 @@ class Router extends Header {
 	/**
 	 * Get request component.
 	 *
-	 * @param int|null $index Index of component array. Set to null
+	 * @param int $index Index of component array. Set to null
 	 *     to return the whole array.
-	 * @return array|string|null If no index is set, the whole
-	 *     component array is returned. Otherwise, indexed element
-	 *     is returned or null if index falls out of range.
+	 * @return mixed If no index is set, the whole component array is
+	 *     returned. Otherwise, indexed element is returned or null if
+	 *     index falls out of range.
 	 */
 	public function get_request_comp(int $index=null) {
 		$comp = $this->request_comp;
