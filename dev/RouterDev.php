@@ -47,11 +47,17 @@ class RouterDev extends Router {
 	/**
 	 * Patched Header::header().
 	 *
-	 * @manonly
+	 * @param string $header_string Header string.
+	 * @param bool $replace The 'replace' option for standard
+	 *     header() function.
+	 *
+	 * @cond
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-	 * @endmanonly
+	 * @endcond
 	 */
-	public static function header($header_string, $replace=false) {
+	public static function header(
+		string $header_string, bool $replace=false
+	) {
 		if (strpos($header_string, 'HTTP/1') !== false) {
 			self::$code = explode(' ', $header_string)[1];
 		} else {
@@ -62,9 +68,9 @@ class RouterDev extends Router {
 	/**
 	 * Patched Header::send_cookie().
 	 *
-	 * @manonly
+	 * @cond
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-	 * @endmanonly
+	 * @endcond
 	 */
 	public static function send_cookie(
 		$name, $value='', $expire=0, $path='', $domain='',
@@ -82,6 +88,8 @@ class RouterDev extends Router {
 
 	/**
 	 * Patched Header::halt().
+	 *
+	 * @param string $arg What to print on halt.
 	 */
 	public static function halt(string $arg=null) {
 		if (!$arg)
@@ -91,6 +99,9 @@ class RouterDev extends Router {
 
 	/**
 	 * Patched Router::wrap_callback().
+	 *
+	 * @param callable $callback Callback method.
+	 * @param array $args HTTP variables collected by router.
 	 */
 	public function wrap_callback(callable $callback, array $args=[]) {
 		ob_start();
@@ -110,6 +121,14 @@ class RouterDev extends Router {
 
 	/**
 	 * Overrides callback args.
+	 *
+	 * Use this in case you want to manipulate collected HTTP
+	 * variables without actually changing the entire route.
+	 *
+	 * @param array $args Dict of HTTP variables for overriding
+	 *     existing args. Key must be one or more of: 'get',
+	 *     'post', 'files', 'put', 'patch', 'delete'. Invalid
+	 *     keys are ignored.
 	 */
 	public function override_callback_args(array $args=[]) {
 		foreach ($args as $key => $val) {
@@ -123,6 +142,8 @@ class RouterDev extends Router {
 
 	/**
 	 * Custom abort for testing.
+	 *
+	 * @param int $code HTTP error code.
 	 */
 	public function abort_custom(int $code) {
 		self::$code = $code;
@@ -134,6 +155,8 @@ class RouterDev extends Router {
 
 	/**
 	 * Custom redirect for testing.
+	 *
+	 * @param string $url Destination URL.
 	 */
 	public function redirect_custom(string $url) {
 		self::$code = 301;
@@ -146,12 +169,18 @@ class RouterDev extends Router {
 	/**
 	 * Custom static file serving for testing.
 	 *
+	 * @param string $path Absolute path to file.
+	 * @param int $cache Cache age in seconds.
+	 * @param mixed $disposition If string, use it as
+	 *     content-disposition in header. If true, infer from basename.
+	 *     If null, no content-disposition header is sent.
+	 *
 	 * @cond
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
 	 * @endcond
 	 */
 	public function static_file_custom(
-		string $path, int $cache=0, bool $disposition=null
+		string $path, int $cache=0, $disposition=null
 	) {
 		self::reset();
 		if (file_exists($path)) {

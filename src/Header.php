@@ -92,8 +92,10 @@ class Header {
 	 *     header() function.
 	 * @codeCoverageIgnore
 	 */
-	public static function header($header_string, $replace=false) {
-		header($header_string, $replace);
+	public static function header(
+		string $header_string, bool $replace=false
+	) {
+		@header($header_string, $replace);
 	}
 
 	/**
@@ -128,7 +130,7 @@ class Header {
 		$name, $value='', $expire=0, $path='', $domain='',
 		$secure=false, $httponly=false
 	) {
-		setcookie($name, $value, $expire, $path, $domain,
+		@setcookie($name, $value, $expire, $path, $domain,
 			$secure, $httponly);
 	}
 
@@ -188,15 +190,17 @@ class Header {
 	 *     be anything since we can serve, e.g. 404 with a text file.
 	 * @param int $cache Cache age, 0 for no cache.
 	 * @param array $headers Additional headers.
-	 * @param string $xsendfile_header If not null, this will be used
-	 *     and sending file is left to the web server.
+	 * @param bool $xsendfile If true, response is delegated to
+	 *     web server. Appropriate header must be set via $headers,
+	 *     e.g.: `X-Accel-Redirect` on Nginx or `X-Sendfile` on
+	 *     Apache.
 	 * @param callable $callback_notfound What to do when the file
 	 *     is not found. If no callback is provided, the method will
 	 *     just immediately halt.
 	 */
 	public static function send_file(
 		string $fpath, $disposition=null, int $code=200, int $cache=0,
-		array $headers=[], $xsendfile_header=null,
+		array $headers=[], bool $xsendfile=null,
 		callable $callback_notfound=null
 	) {
 
@@ -225,9 +229,7 @@ class Header {
 				$disposition));
 		}
 
-		if ($xsendfile_header)
-			static::header($xsendfile_header);
-		else
+		if (!$xsendfile)
 			readfile($fpath);
 
 		static::halt();

@@ -15,7 +15,9 @@ use BFITech\ZapCoreDev\RoutingDev;
  */
 class RouterDefault extends Router {
 
-	public static function header($header_string, $replace=false) {
+	public static function header(
+		string $header_string, bool $replace=false
+	) {
 		RouterDev::header($header_string, $replace);
 	}
 

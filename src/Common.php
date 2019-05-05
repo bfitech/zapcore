@@ -11,9 +11,9 @@ class CommonError extends \Exception {
 /**
  * Utility class.
  *
- * @manonly
+ * @cond
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
- * @endmanonly
+ * @endcond
  */
 class Common {
 
@@ -141,11 +141,11 @@ class Common {
 	 *     HTTP code is -1 for invalid method, 0 for failing connection,
 	 *     and any of standard code for successful connection.
 	 *
-	 * @manonly
+	 * @if TRUE
 	 * @codeCoverageIgnore
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
-	 * @endmanonly
+	 * @endif
 	 */
 	public static function http_client(array $kwargs) {
 		$url = $method = null;

@@ -10,7 +10,9 @@ class HeaderPatched extends Header {
 	public static $code = 200;
 	public static $head = [];
 
-	public static function header($header_string, $replace=false) {
+	public static function header(
+		string $header_string, bool $replace=false
+	) {
 		if (strpos($header_string, 'HTTP/1.') === 0)
 			static::$code = (int)explode(' ', $header_string)[1];
 		else
@@ -59,18 +61,25 @@ class HeaderTest extends TestCase {
 	public function test_send_file() {
 		$hdr = new HeaderPatched;
 		$hdr::send_file(__FILE__, true,
-			200, 0, [], 'X-Sendfile: ' . __FILE__);
+			200, 0, ['X-Sendfile: ' . __FILE__], true);
 		$this->assertEquals($hdr::$code, 200);
 
+		$hdr::$head = [];
+		$hdr::send_file(__FILE__ . 'x', true,
+			200, 0, ['X-Sendfile: ' . __FILE__], true);
+		$this->assertEquals($hdr::$code, 404);
+
+		$hdr::$head = [];
 		ob_start();
 		$hdr::send_file(__FILE__ . '.log', null,
-			200, 0, [], [], function(){
+			200, 0, [], false, function(){
 				echo __FILE__;
 			});
 		$rv = ob_get_clean();
 		$this->assertEquals($hdr::$code, 404);
 		$this->assertEquals($rv, __FILE__);
 
+		$hdr::$head = [];
 		ob_start();
 		$hdr::send_file(__FILE__);
 		$rv = ob_get_clean();

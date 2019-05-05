@@ -471,6 +471,9 @@ class Router extends Header {
 	 *
 	 * Override this for more decorator-like processing. Make sure
 	 * the override always ends with halt().
+	 *
+	 * @param callable $callback Callback method.
+	 * @param array $args HTTP variables collected by router.
 	 */
 	public function wrap_callback(callable $callback, array $args=[]) {
 		self::$logger->info(sprintf("Router: %s '%s'.",
@@ -676,12 +679,12 @@ class Router extends Header {
 	 *
 	 * @param string $path Absolute path to file.
 	 * @param int $cache Cache age in seconds.
-	 * @param string $disposition Set basename in a content-disposition
-	 *     in header. If true, basename if inferred from path. If null,
-	 *     no content-disposition header will be sent.
+	 * @param mixed $disposition If string, use it as
+	 *     content-disposition in header. If true, infer from basename.
+	 *     If null, no content-disposition header is sent.
 	 */
 	final public function static_file(
-		string $path, int $cache=0, string $disposition=null
+		string $path, int $cache=0, $disposition=null
 	) {
 		self::$logger->info("Router: static: '$path'.");
 		if (!method_exists($this, 'static_file_custom'))
