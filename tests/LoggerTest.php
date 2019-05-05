@@ -97,23 +97,4 @@ class LoggerTest extends TestCase {
 		$this->assertTrue($this->str_in_file($fl2, 'XNOWRITE'));
 	}
 
-	public function test_logger_activation() {
-		$fl = __TESTDIR__ . '/zapcore-logger-test-04.log';
-		self::$flogs[] = $fl;
-
-		$logger = new Logger(Logger::DEBUG, $fl);
-		$logger->info("X01");
-		$this->assertTrue($this->str_in_file($fl, 'X01'));
-
-		# temporarily deactivate
-		$logger->deactivate();
-		$logger->info("X02");
-		$this->assertFalse($this->str_in_file($fl, 'X02'));
-
-		# re-activate
-		$logger->activate();
-		$logger->info("X03");
-		$this->assertTrue($this->str_in_file($fl, 'X03'));
-	}
-
 }
