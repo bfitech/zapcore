@@ -31,12 +31,20 @@ class LoggerTest extends TestCase {
 		$fl = __ZAPTESTDIR__ . '/zapcore-logger-test-00.log';
 		self::$flogs[] = $fl;
 
-		$logger = new Logger('a', $fl);
-		$logger->error("XDEFAULTLEVEL");
-		$this->assertTrue($this->str_in_file($fl, 'XDEFAULTLEVEL'));
+		try {
+			$logger = new Logger('a', $fl);
+		} catch(\TypeError $err) {
+		}
 
-		$logger->warning("XWARNING");
-		$this->assertTrue(!$this->str_in_file($fl, 'XWARNING'));
+		$logger = new Logger(null, $fl);
+
+		$logger->warning("some warning");
+		$this->assertTrue(!$this->str_in_file($fl, 'some warning'));
+		$this->assertTrue(!$this->str_in_file($fl, 'WRN'));
+
+		$logger->error("some error");
+		$this->assertTrue($this->str_in_file($fl, 'some error'));
+		$this->assertTrue($this->str_in_file($fl, 'ERR'));
 	}
 
 	public function test_logger_write() {

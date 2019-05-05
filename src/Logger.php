@@ -32,9 +32,9 @@ class Logger {
 	 * @todo Write to syslog.
 	 */
 	public function __construct(
-		$level=null, string $path=null, $handle=null
+		int $level=null, string $path=null, $handle=null
 	) {
-		$this->level = intval($level);
+		$this->level = $level;
 		if (!$this->level)
 			$this->level = self::ERROR;
 		if ($handle) {
