@@ -17,7 +17,7 @@ class HeaderPatched extends Header {
 			static::$head[] = $header_string;
 	}
 
-	public static function halt($str=null) {
+	public static function halt(string $str=null) {
 		if ($str)
 			echo $str;
 	}

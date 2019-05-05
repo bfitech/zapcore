@@ -83,7 +83,7 @@ class RouterDev extends Router {
 	/**
 	 * Patched Header::halt().
 	 */
-	public static function halt($arg=null) {
+	public static function halt(string $arg=null) {
 		if (!$arg)
 			return;
 		echo $arg;
@@ -92,7 +92,7 @@ class RouterDev extends Router {
 	/**
 	 * Patched Router::wrap_callback().
 	 */
-	public function wrap_callback($callback, $args=[]) {
+	public function wrap_callback(callable $callback, array $args=[]) {
 		ob_start();
 		foreach (self::$override_args as $key => $val)
 			$args[$key] = $val;
@@ -111,7 +111,7 @@ class RouterDev extends Router {
 	/**
 	 * Overrides callback args.
 	 */
-	public function override_callback_args($args=[]) {
+	public function override_callback_args(array $args=[]) {
 		foreach ($args as $key => $val) {
 			if (!in_array($key, [
 				'get', 'post', 'files', 'put', 'patch', 'delete',
@@ -124,7 +124,7 @@ class RouterDev extends Router {
 	/**
 	 * Custom abort for testing.
 	 */
-	public function abort_custom($code) {
+	public function abort_custom(int $code) {
 		self::$code = $code;
 		static::$body_raw = "ERROR: $code";
 		self::$body = "ERROR: $code";
@@ -135,7 +135,7 @@ class RouterDev extends Router {
 	/**
 	 * Custom redirect for testing.
 	 */
-	public function redirect_custom($url) {
+	public function redirect_custom(string $url) {
 		self::$code = 301;
 		self::$head = ["Location: $url"];
 		self::$body_raw = self::$body = "Location: $url";
@@ -146,12 +146,12 @@ class RouterDev extends Router {
 	/**
 	 * Custom static file serving for testing.
 	 *
-	 * @manonly
+	 * @cond
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-	 * @endmanonly
+	 * @endcond
 	 */
 	public function static_file_custom(
-		$path, $cache=0, $disposition=false
+		string $path, int $cache=0, bool $disposition=null
 	) {
 		self::reset();
 		if (file_exists($path)) {
@@ -178,61 +178,6 @@ class RouterDev extends Router {
 		if (!is_dir(__ZAPTESTDIR__))
 			mkdir(__ZAPTESTDIR__, 0755);
 		return __ZAPTESTDIR__;
-	}
-
-}
-
-
-/**
- * Mock routing.
- *
- * Use this class to instantiate a router and perform requests on it
- * without manually manipulating HTTP variables.
- *
- * Pardon the class name. It's one of hard problems in CS. :\
- */
-class RoutingDev {
-
-	/** RouterDev instance. */
-	public static $core;
-
-	/**
-	 * Constructor.
-	 *
-	 * @param RouterDev $core RouterDev instance. Optional. Since the
-	 *     router this sets is made public and static, you can always
-	 *     patch as you go.
-	 */
-	public function __construct(RouterDev $core=null) {
-		self::$core = ($core != null) ? $core : new RouterDev;
-	}
-
-	/**
-	 * Fake request.
-	 *
-	 * Use this to simulate HTTP request. To set args to callback
-	 * handler without relying on collected HTTP variables, use
-	 * $args.
-	 *
-	 * @param string $request_uri Simulated request URI.
-	 * @param string $request_method Simulated request method.
-	 * @param array $args Simulated callback args.
-	 * @param array $cookie Simulated cookies.
-	 * @return RouterDev instance, useful for chaining from this method
-	 *     to $core->route().
-	 */
-	public function request(
-		$request_uri=null, $request_method='GET', $args=[], $cookie=[]
-	) {
-		self::$core->deinit()->reset();
-		self::$core->config('home', '/');
-		$_SERVER['REQUEST_URI'] = $request_uri
-			? $request_uri : '/';
-		$_SERVER['REQUEST_METHOD'] = $request_method;
-		$_COOKIE = $cookie;
-		if ($args)
-			self::$core->override_callback_args($args);
-		return self::$core;
 	}
 
 }

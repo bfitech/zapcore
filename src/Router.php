@@ -472,7 +472,7 @@ class Router extends Header {
 	 * Override this for more decorator-like processing. Make sure
 	 * the override always ends with halt().
 	 */
-	public function wrap_callback($callback, $args=[]) {
+	public function wrap_callback(callable $callback, array $args=[]) {
 		self::$logger->info(sprintf("Router: %s '%s'.",
 			$this->request_method, $this->request_path));
 		$callback($args);

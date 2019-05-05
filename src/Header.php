@@ -101,25 +101,18 @@ class Header {
 	 *
 	 * Override this for non-web context, e.g. for testing.
 	 *
-	 * @param mixed $arg What to print on halt. If null, nothing
-	 *     is printed. If it's a numeric or string, it will be
-	 *     immediately printed. For other types, it's completely at
-	 *     the mercy of `print_r()`: formatted array, true becomes '1',
-	 *     etc. Use with care.
+	 * @param string $arg What to print on halt. If null, nothing
+	 *     is printed. If it's a string, it will be immediately printed.
 	 * @codeCoverageIgnore
 	 *
 	 * @cond
 	 * @SuppressWarnings(PHPMD.ExitExpression)
 	 * @endcond
 	 */
-	public static function halt($arg=null) {
+	public static function halt(string $arg=null) {
 		if ($arg === null)
 			die();
-		if (is_string($arg) || is_numeric($arg))
-			echo $arg;
-		else
-			print_r($arg);
-		die();
+		die($arg);
 	}
 
 	/**

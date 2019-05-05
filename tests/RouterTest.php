@@ -19,7 +19,7 @@ class RouterDefault extends Router {
 		RouterDev::header($header_string, $replace);
 	}
 
-	public static function halt($arg=null) {
+	public static function halt(string $arg=null) {
 		RouterDev::halt($arg);
 	}
 
@@ -34,9 +34,6 @@ class RouterTest extends TestCase {
 		if (file_exists($logfile))
 			unlink($logfile);
 		self::$logger = new Logger(Logger::DEBUG, $logfile);
-	}
-
-	public static function tearDownAfterClass() {
 	}
 
 	private function make_router() {
