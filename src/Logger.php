@@ -9,13 +9,13 @@ namespace BFITech\ZapCore;
  */
 class Logger {
 
-	/** Debug log level constant. */
+	/** Debug log level. */
 	const DEBUG = 0x10;
-	/** Info log level constant. */
+	/** Info log level. */
 	const INFO = 0x20;
-	/** Warning log level constant. */
+	/** Warning log level. */
 	const WARNING = 0x30;
-	/** Error log level constant. */
+	/** Error log level. */
 	const ERROR = 0x40;
 
 	private $level = self::ERROR;
@@ -56,15 +56,16 @@ class Logger {
 	 * information.
 	 *
 	 * @param string $timestamp Timestamp, always in UTC ISO-8601.
-	 * @param int $level String representation of current log level.
+	 * @param string $levelstr String representation of current log
+	 *     level, e.g. `DEB` for debug.
 	 * @param string $msg Error message.
 	 * @return string Formatted line.
 	 */
 	protected function format(
-		string $timestamp, $level, string $msg
+		string $timestamp, string $levelstr, string $msg
 	) {
 		$fmt = "[%s] %s: %s\n";
-		return sprintf($fmt, $timestamp, $level, $msg);
+		return sprintf($fmt, $timestamp, $levelstr, $msg);
 	}
 
 	/**
@@ -76,7 +77,7 @@ class Logger {
 		$msg = str_replace([
 			"\t", "\n", "\r",
 		], [
-			" ", '\n', '\r',
+			'\t', '\n', '\r',
 		], $msg);
 		return preg_replace('! +!', ' ', $msg);
 	}
@@ -84,13 +85,13 @@ class Logger {
 	/**
 	 * Write to handle.
 	 */
-	private function write($level, string $msg) {
+	private function write(string $levelstr, string $msg) {
 		$timestamp = gmdate(\DateTime::ATOM);
 			// @codeCoverageIgnoreStart
 		try {
 			// @codeCoverageIgnoreEnd
 			$msg = $this->one_line($msg);
-			$line = $this->format($timestamp, $level, $msg);
+			$line = $this->format($timestamp, $levelstr, $msg);
 			fwrite($this->handle, $line);
 			// @codeCoverageIgnoreStart
 		} catch(\Exception $e) {
