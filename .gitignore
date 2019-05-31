@@ -7,11 +7,11 @@
 *.ini
 *.sq3
 *.orig
+.DS_Store
 
 .htaccess
 composer.lock
-*config.php
 
 /vendor/
 /docs/
-
+/tests/testdata/
