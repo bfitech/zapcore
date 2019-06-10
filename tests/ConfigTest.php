@@ -5,6 +5,14 @@ use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Config;
 
 
+function testdir() {
+	$dir = __DIR__ . '/testdata';
+	if (!is_dir($dir))
+		mkdir($dir, 0755);
+	return $dir;
+}
+
+
 class ConfigTest extends TestCase {
 
 	private $file;
@@ -16,8 +24,7 @@ class ConfigTest extends TestCase {
 				'key_b' => 'value_b'
 			]
 		];
-		$this->file = dirname(
-			__DIR__) . '/tests/testdata/config.json';
+		$this->file = testdir() . '/zapcore.json';
 		file_put_contents($this->file,
 			json_encode($this->data,
 				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -28,8 +35,7 @@ class ConfigTest extends TestCase {
 	}
 
 	public function test_constructor() {
-		$file = dirname(
-			__DIR__) . '/tests/testdata/invalid-config.json';
+		$file = testdir() . '/invalid-zapcore.json';
 
 		# invalid file
 		$config = new Config($file);
