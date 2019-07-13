@@ -65,9 +65,7 @@ use PHPUnit\Framework\TestCase as PHPUnitTestCase;
  */
 class TestCase extends PHPUnitTestCase {
 
-	/**
-	 * Shorthand for assertEquals.
-	 **/
+	/** Shorthand for assertEquals. */
 	public static function eq() {
 		return function($a, $b) {
 			self::assertEquals($a, $b);
