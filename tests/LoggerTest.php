@@ -1,9 +1,9 @@
 <?php
 
 
-use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCoreDev\RouterDev;
+use BFITech\ZapCoreDev\TestCase;
 
 
 class LoggerTest extends TestCase {
@@ -12,7 +12,7 @@ class LoggerTest extends TestCase {
 	public static $testdir;
 
 	public static function setUpBeforeClass() {
-		self::$testdir = RouterDev::testdir(__FILE__);
+		self::$testdir = self::tdir(__FILE__);
 	}
 
 	public static function tearDownAfterClass() {
@@ -29,81 +29,89 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_testdir() {
+		extract(self::vars());
+
 		$valid_test_basefile = true;
 		try {
-			RouterDev::testdir('/z/z/z');
+			self::tdir('/z/z/z');
 		} catch(\Exception $err) {
 			$valid_test_basefile = false;
 		}
-		$this->assertFalse($valid_test_basefile);
+		$fl($valid_test_basefile);
 
 		$valid_testdir_basename = true;
 		try {
-			RouterDev::testdir(__FILE__, '');
+			self::tdir(__FILE__, '');
 		} catch(\Exception $err) {
 			$valid_testdir_basename = false;
 		}
-		$this->assertFalse($valid_testdir_basename);
+		$fl($valid_testdir_basename);
 
 		$create_testdir_ok = true;
 		try {
-			RouterDev::testdir(__FILE__, '/z/z/z');
+			self::tdir(__FILE__, '/z/z/z');
 		} catch(\Exception $err) {
 			$create_testdir_ok = false;
 		}
-		$this->assertFalse($create_testdir_ok);
+		$fl($create_testdir_ok);
 	}
 
 	public function test_constructor() {
-		$fl = self::$testdir . '/zapcore-logger-test-00.log';
-		self::$flogs[] = $fl;
+		extract(self::vars());
+
+		$fname = self::$testdir . '/zapcore-logger-test-00.log';
+		self::$flogs[] = $fname;
 
 		try {
-			$logger = new Logger('a', $fl);
+			$logger = new Logger('a', $fname);
 		} catch(\TypeError $err) {
 		}
 
-		$logger = new Logger(null, $fl);
+		$logger = new Logger(null, $fname);
 
 		$logger->warning("some warning");
-		$this->assertTrue(!$this->str_in_file($fl, 'some warning'));
-		$this->assertTrue(!$this->str_in_file($fl, 'WRN'));
+		$fl($this->str_in_file($fname, 'some warning'));
+		$fl($this->str_in_file($fname, 'WRN'));
 
 		$logger->error("some error");
-		$this->assertTrue($this->str_in_file($fl, 'some error'));
-		$this->assertTrue($this->str_in_file($fl, 'ERR'));
+		$tr($this->str_in_file($fname, 'some error'));
+		$tr($this->str_in_file($fname, 'ERR'));
 	}
 
 	public function test_logger_write() {
-		$fl = self::$testdir . '/zapcore-logger-test-01.log';
-		self::$flogs[] = $fl;
+		extract(self::vars());
 
-		$logger = new Logger(Logger::INFO, $fl);
-		$this->assertTrue(file_exists($fl));
+		$fname = self::$testdir . '/zapcore-logger-test-01.log';
+		self::$flogs[] = $fname;
+
+		$logger = new Logger(Logger::INFO, $fname);
+		$tr(file_exists($fname));
 
 		# write to logfile w.r.t log level
 
 		$logger->info("Some info.");
-		$this->assertTrue($this->str_in_file($fl, 'INF'));
+		$tr($this->str_in_file($fname, 'INF'));
 
 		$logger->warning("Some warning.");
-		$this->assertTrue($this->str_in_file($fl, 'WRN'));
+		$tr($this->str_in_file($fname, 'WRN'));
 
 		$logger->error("Some error.");
-		$this->assertTrue($this->str_in_file($fl, 'ERR'));
+		$tr($this->str_in_file($fname, 'ERR'));
 
 		$logger->debug("Some debug.");
-		$this->assertFalse($this->str_in_file($fl, 'DEB'));
+		$fl($this->str_in_file($fname, 'DEB'));
 	}
 
 	public function test_logger_io() {
-		$_fl = self::$testdir . '/zapcore-logger-test-';
+		extract(self::vars());
 
-		$fl2 = $_fl . '02.log';
+		$pfx = self::$testdir . '/zapcore-logger-test-';
+
+		$fl2 = $pfx . '02.log';
 		self::$flogs[] = $fl2;
 		touch($fl2);
 
-		$fl3 = $_fl . '03.log';
+		$fl3 = $pfx . '03.log';
 		self::$flogs[] = $fl3;
 		touch($fl3);
 
@@ -111,8 +119,8 @@ class LoggerTest extends TestCase {
 		$logger = new Logger(Logger::DEBUG, $fl2,
 			fopen($fl3, 'ab'));
 		$logger->debug("Some debug.");
-		$this->assertFalse($this->str_in_file($fl2, 'DEB'));
-		$this->assertTrue($this->str_in_file($fl3, 'DEB'));
+		$fl($this->str_in_file($fl2, 'DEB'));
+		$tr($this->str_in_file($fl3, 'DEB'));
 
 		# automatically write to STDERR if file is read-only
 		chmod($fl3, 0400);
@@ -120,7 +128,7 @@ class LoggerTest extends TestCase {
 		# to not clutter terminal, use 2>/dev/null when
 		# running test
 		$logger->info("XREDIR");
-		$this->assertFalse($this->str_in_file($fl3, 'XREDIR'));
+		$fl($this->str_in_file($fl3, 'XREDIR'));
 
 		# if chmod-ing happens after opening handle, handle is
 		# still writable
@@ -128,8 +136,8 @@ class LoggerTest extends TestCase {
 		$logger = new Logger(Logger::DEBUG, $fl2);
 		chmod($fl2, 0400);
 		$logger->info("XNOWRITE");
-		$this->assertTrue($this->str_in_file($fl2, 'XSTART'));
-		$this->assertTrue($this->str_in_file($fl2, 'XNOWRITE'));
+		$tr($this->str_in_file($fl2, 'XSTART'));
+		$tr($this->str_in_file($fl2, 'XNOWRITE'));
 	}
 
 }
