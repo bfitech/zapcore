@@ -8,8 +8,10 @@ use BFITech\ZapCore\Common;
 /**
  * Common utilities tests.
  *
- * @requires OS Linux
- * @todo Support OSes other than Linux.
+ * @requires OS (Linux|Darwin)
+ *
+ * @todo Support OSes other than UN*Xes. Some of the tests rely on
+ *     Bash which is not ubiquitous.
  */
 class CommonTest extends TestCase {
 

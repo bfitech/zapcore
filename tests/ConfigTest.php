@@ -3,14 +3,7 @@
 
 use PHPUnit\Framework\TestCase;
 use BFITech\ZapCore\Config;
-
-
-function testdir() {
-	$dir = __DIR__ . '/testdata';
-	if (!is_dir($dir))
-		mkdir($dir, 0755);
-	return $dir;
-}
+use BFITech\ZapCoreDev\RouterDev;
 
 
 class ConfigTest extends TestCase {
@@ -24,9 +17,9 @@ class ConfigTest extends TestCase {
 				'key_b' => 'value_b'
 			]
 		];
-		$this->file = testdir() . '/zapcore.json';
-		file_put_contents($this->file,
-			json_encode($this->data,
+		$this->file = RouterDev::testdir(__FILE__) . '/zapcore.json';
+		file_put_contents(
+			$this->file, json_encode($this->data,
 				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 	}
 
@@ -35,7 +28,7 @@ class ConfigTest extends TestCase {
 	}
 
 	public function test_constructor() {
-		$file = testdir() . '/invalid-zapcore.json';
+		$file = RouterDev::testdir(__FILE__) . '/invalid-zapcore.json';
 
 		# invalid file
 		$config = new Config($file);

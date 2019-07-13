@@ -9,9 +9,10 @@ use BFITech\ZapCoreDev\RouterDev;
 class LoggerTest extends TestCase {
 
 	public static $flogs = [];
+	public static $testdir;
 
 	public static function setUpBeforeClass() {
-		RouterDev::testdir();
+		self::$testdir = RouterDev::testdir(__FILE__);
 	}
 
 	public static function tearDownAfterClass() {
@@ -27,8 +28,34 @@ class LoggerTest extends TestCase {
 		return false;
 	}
 
+	public function test_testdir() {
+		$valid_test_basefile = true;
+		try {
+			RouterDev::testdir('/z/z/z');
+		} catch(\Exception $err) {
+			$valid_test_basefile = false;
+		}
+		$this->assertFalse($valid_test_basefile);
+
+		$valid_testdir_basename = true;
+		try {
+			RouterDev::testdir(__FILE__, '');
+		} catch(\Exception $err) {
+			$valid_testdir_basename = false;
+		}
+		$this->assertFalse($valid_testdir_basename);
+
+		$create_testdir_ok = true;
+		try {
+			RouterDev::testdir(__FILE__, '/z/z/z');
+		} catch(\Exception $err) {
+			$create_testdir_ok = false;
+		}
+		$this->assertFalse($create_testdir_ok);
+	}
+
 	public function test_constructor() {
-		$fl = __ZAPTESTDIR__ . '/zapcore-logger-test-00.log';
+		$fl = self::$testdir . '/zapcore-logger-test-00.log';
 		self::$flogs[] = $fl;
 
 		try {
@@ -48,7 +75,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_logger_write() {
-		$fl = __ZAPTESTDIR__ . '/zapcore-logger-test-01.log';
+		$fl = self::$testdir . '/zapcore-logger-test-01.log';
 		self::$flogs[] = $fl;
 
 		$logger = new Logger(Logger::INFO, $fl);
@@ -70,7 +97,7 @@ class LoggerTest extends TestCase {
 	}
 
 	public function test_logger_io() {
-		$_fl = __ZAPTESTDIR__ . '/zapcore-logger-test-';
+		$_fl = self::$testdir . '/zapcore-logger-test-';
 
 		$fl2 = $_fl . '02.log';
 		self::$flogs[] = $fl2;
