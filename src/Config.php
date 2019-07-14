@@ -220,24 +220,21 @@ class Config {
 	 */
 	public final function set($key, $value) {
 		$sdata = $this->get($key);
-		if (is_array($sdata) && $this->is_dict($sdata)) {
+		if (is_array($sdata) && $this->is_dict($sdata))
 			$this->throw_error(
 				ConfigError::SET_HAS_SUBKEY,
 				"Key '$key' has subkey."
 			);
-		}
-		if (is_array($value) && !is_array($sdata)) {
+		if (is_array($value) && !is_array($sdata))
 			$this->throw_error(
 				ConfigError::SET_VALUE_NOT_SCALAR,
 				"Key '$key' is an array."
 			);
-		}
-		if (!is_array($value) && is_array($sdata)) {
+		if (!is_array($value) && is_array($sdata))
 			$this->throw_error(
 				ConfigError::SET_VALUE_NOT_ARRAY,
 				"Key '$key' is not an array."
 			);
-		}
 
 		$nval =& $this->clist;
 		$akey = explode($this->sep, $key);

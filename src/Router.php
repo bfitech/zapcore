@@ -4,13 +4,16 @@
 namespace BFITech\ZapCore;
 
 
+class RouterError extends \Exception {
+}
+
 /**
  * Router class.
  *
- * @manonly
+ * @cond
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
- * @endmanonly
+ * @endcond
  */
 class Router extends Header {
 
@@ -33,24 +36,14 @@ class Router extends Header {
 	/**
 	 * Constructor.
 	 *
-	 * @param string|null $home Override home path autodetection if
-	 *     it's a string.
-	 * @param string|null $host Override host path autodetection if
-	 *     it's a string.
-	 * @param bool $shutdown Whether shutdown function should be
-	 *     invoked at the end. Useful for multiple routers in one
-	 *     project.
+	 * To finetune properties, use Router->config().
+	 *
 	 * @param Logger $logger Logging service, an instance of Logger
-	 *     class.
+	 *     class. Can also be set via Router->config().
 	 */
-	public function __construct(
-		$home=null, $host=null, $shutdown=true, Logger $logger=null
-	) {
+	public function __construct(Logger $logger=null) {
 		self::$logger = $logger ? $logger : new Logger();
 		self::$logger->debug('Router: started.');
-		$this->config_home($home);
-		$this->config_host($host);
-		$this->auto_shutdown = $shutdown;
 	}
 
 	/**
@@ -66,7 +59,7 @@ class Router extends Header {
 	/**
 	 * Host configuration validation.
 	 */
-	private function config_host($host) {
+	private function config_host($host=null) {
 		if (filter_var($host, FILTER_VALIDATE_URL,
 				FILTER_FLAG_PATH_REQUIRED) === false)
 			return;
@@ -137,8 +130,7 @@ class Router extends Header {
 	 * Reset properties to default values.
 	 *
 	 * Mostly useful for testing, so that you don't have to repeatedly
-	 * instantiate the object, especially when constructor parameters
-	 * are considerably verbose.
+	 * instantiate the object.
 	 */
 	final public function deinit() {
 		$this->request_path = null;
@@ -211,7 +203,7 @@ class Router extends Header {
 	 *
 	 * @codeCoverageIgnore
 	 */
-	private function verify_port($port, $proto) {
+	private function verify_port($port=null, $proto) {
 		if (!$port)
 			return $port;
 		if ($port < 0 || $port > pow(2, 16))
@@ -328,8 +320,9 @@ class Router extends Header {
 	 * @param bool $is_raw If true, request body is not treated as
 	 *     HTTP query. Applicable for POST only.
 	 */
-	private function execute_callback($callback, $args, $is_raw=null) {
-
+	private function execute_callback(
+		$callback, $args, $is_raw=null
+	) {
 		$method = strtolower($this->request_method);
 
 		if (in_array($method, ['head', 'get', 'options']))
@@ -369,6 +362,14 @@ class Router extends Header {
 	}
 
 	/**
+	 * Write to log and throw exception on error.
+	 */
+	private static function throw_error($msg) {
+		self::$logger->error($msg);
+		throw new RouterError($msg);
+	}
+
+	/**
 	 * Path parser.
 	 *
 	 * This parses route path and returns arrays that will parse
@@ -383,15 +384,24 @@ class Router extends Header {
 	 *     - an array containing keys that will be used to create
 	 *       dynamic variables with whatever matches the previous
 	 *       regex
-	 * @see Router::route for usage.
+	 * @see Router::route() for usage.
 	 *
-	 * @manonly
+	 * @if TRUE
 	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
 	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
 	 * @SuppressWarnings(PHPMD.NPathComplexity)
-	 * @endmanonly
+	 * @endif
 	 */
 	final public static function path_parser($path) {
+		# path must start with slash
+		if ($path[0] != '/')
+			self::throw_error(
+				"Router: path invalid in '$path'.");
+
+		# ignore trailing slash
+		if ($path != '/')
+			$path = rtrim($path, '/');
+
 		# allowed characters in path
 		$valid_chars = 'a-zA-Z0-9\_\.\-@%:';
 		# param left delimiter
@@ -405,22 +415,18 @@ class Router extends Header {
 		# valid param key
 		$valid_key = "[a-z][a-z0-9\_]*";
 
-		if (!preg_match("!^[${valid_chars}${delims}]+$!", $path)) {
+		if (!preg_match("!^[${valid_chars}${delims}]+$!", $path))
 			# invalid characters
-			self::$logger->error(
+			self::throw_error(
 				"Router: invalid characters in path: '$path'.");
-			return [[], []];
-		}
 
 		if (
 			preg_match("!${non_delims}[${elf}]!", $path) ||
 			preg_match("![${erg}]${non_delims}!", $path)
-		) {
+		)
 			# invalid dynamic path pattern
-			self::$logger->error(
+			self::throw_error(
 				"Router: dynamic path not well-formed: '$path'.");
-			return [[], []];
-		}
 
 		preg_match_all("!/([$elf][^$erg]+[$erg])!", $path, $tokens,
 			PREG_OFFSET_CAPTURE);
@@ -429,12 +435,10 @@ class Router extends Header {
 		foreach ($tokens[1] as $token) {
 
 			$key = str_replace(['{','}','<','>'], '', $token[0]);
-			if (!preg_match("!^${valid_key}\$!i", $key)) {
+			if (!preg_match("!^${valid_key}\$!i", $key))
 				# invalid param key
-				self::$logger->error(
+				self::throw_error(
 					"Router: invalid param key: '$path'.");
-				return [[], []];
-			}
 
 			$keys[] = $key;
 			$replacement = $valid_chars;
@@ -444,11 +448,9 @@ class Router extends Header {
 			$symbols[] = [$replacement, $token[1], strlen($token[0])];
 		}
 
-		if (count($keys) > count(array_unique($keys))) {
+		if (count($keys) > count(array_unique($keys)))
 			# never allow key reuse to prevent unexpected overrides
-			self::$logger->error("Router: param key reused: '$path'.");
-			return [[], []];
-		}
+			self::throw_error("Router: param key reused: '$path'.");
 
 		# construct regex pattern for all capturing keys
 		$idx = 0;
@@ -479,9 +481,12 @@ class Router extends Header {
 	 *
 	 * Override this for more decorator-like processing. Make sure
 	 * the override always ends with halt().
+	 *
+	 * @param callable $callback Callback method.
+	 * @param array $args HTTP variables collected by router.
 	 */
 	public function wrap_callback($callback, $args=[]) {
-		self::$logger->info(sprintf("Router: %s '%s'.",
+		self::$logger->debug(sprintf("Router: %s '%s'.",
 			$this->request_method, $this->request_path));
 		$callback($args);
 		static::halt();
@@ -502,7 +507,8 @@ class Router extends Header {
 	 * @return object|mixed Router instance for easier chaining.
 	 */
 	final public function route(
-		$path, $callback, $method='GET', $is_raw=null
+		$path, $callback, $method='GET',
+		$is_raw=null
 	) {
 
 		# route always initializes
@@ -511,23 +517,6 @@ class Router extends Header {
 		# check if request has been handled
 		if ($this->request_handled)
 			return $this;
-
-		# verify path
-		if ($path[0] != '/') {
-			self::$logger->error(
-				"Router: path invalid in '$path'.");
-			return $this;
-		}
-		if ($path != '/')
-			# ignore trailing slash
-			$path = rtrim($path, '/');
-
-		# verify callback
-		if (!is_callable($callback)) {
-			self::$logger->error(
-				"Router: callback invalid in '$path'.");
-			return $this;
-		}
 
 		# verify route method
 		if (!$this->verify_route_method($method))
@@ -690,9 +679,9 @@ class Router extends Header {
 	 *
 	 * @param string $path Absolute path to file.
 	 * @param int $cache Cache age in seconds.
-	 * @param string $disposition Set basename in a content-disposition
-	 *     in header. If true, basename if inferred from path. If null,
-	 *     no content-disposition header will be sent.
+	 * @param mixed $disposition If string, use it as
+	 *     content-disposition in header. If true, infer from basename.
+	 *     If null, no content-disposition header is sent.
 	 */
 	final public function static_file(
 		$path, $cache=0, $disposition=null
@@ -754,11 +743,11 @@ class Router extends Header {
 	/**
 	 * Get request component.
 	 *
-	 * @param int|null $index Index of component array. Set to null
+	 * @param int $index Index of component array. Set to null
 	 *     to return the whole array.
-	 * @return array|string|null If no index is set, the whole
-	 *     component array is returned. Otherwise, indexed element
-	 *     is returned or null if index falls out of range.
+	 * @return mixed If no index is set, the whole component array is
+	 *     returned. Otherwise, indexed element is returned or null if
+	 *     index falls out of range.
 	 */
 	public function get_request_comp($index=null) {
 		$comp = $this->request_comp;
