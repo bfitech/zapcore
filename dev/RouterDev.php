@@ -42,6 +42,7 @@ class RouterDev extends Router {
 		self::$body = null;
 		self::$errno = 0;
 		self::$data = [];
+		self::$override_args = [];
 	}
 
 	/**
@@ -122,18 +123,18 @@ class RouterDev extends Router {
 	/**
 	 * Overrides callback args.
 	 *
-	 * Use this in case you want to manipulate collected HTTP
-	 * variables without actually changing the entire route.
+	 * Use this in case you want to manipulate one or more collected
+	 * HTTP variables without tweaking $_GET, $_POST and other globals.
 	 *
 	 * @param array $args Dict of HTTP variables for overriding
 	 *     existing args. Key must be one or more of: 'get',
-	 *     'post', 'files', 'put', 'patch', 'delete'. Invalid
-	 *     keys are ignored.
+	 *     'post', 'files', 'put', 'patch', 'delete', 'header'.
+	 *     Invalid keys are ignored.
 	 */
 	public function override_callback_args(array $args=[]) {
 		foreach ($args as $key => $val) {
 			if (!in_array($key, [
-				'get', 'post', 'files', 'put', 'patch', 'delete',
+				'get', 'post', 'files', 'put', 'patch', 'delete'
 			]))
 				continue;
 			self::$override_args[$key] = $val;
