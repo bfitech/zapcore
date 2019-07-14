@@ -12,6 +12,11 @@ A very simple PHP router and other utilities.
 
 ----
 
+**This is a backport branch for PHP 5, released as version &gt;= 1.4,
+&lt; 2.0. If you're running PHP 7, please use the `master` branch.**
+
+----
+
 ## 0. Reason
 
 [![but why?](http://s.bandungfe.net/i/but-why.gif)](https://en.wikipedia.org/wiki/Category:PHP_frameworks)
