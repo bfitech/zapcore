@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 
 namespace BFITech\ZapCore;
@@ -9,19 +9,18 @@ namespace BFITech\ZapCore;
  */
 class Logger {
 
-	/** Debug log level constant. */
+	/** Debug log level. */
 	const DEBUG = 0x10;
-	/** Info log level constant. */
+	/** Info log level. */
 	const INFO = 0x20;
-	/** Warning log level constant. */
+	/** Warning log level. */
 	const WARNING = 0x30;
-	/** Error log level constant. */
+	/** Error log level. */
 	const ERROR = 0x40;
 
 	private $level = self::ERROR;
 	private $path = null;
 	private $handle = null;
-	private $is_active = true;
 
 	/**
 	 * Constructor.
@@ -29,10 +28,13 @@ class Logger {
 	 * @param int $level Log level.
 	 * @param string $path Path to log file. If null, stderr is used.
 	 * @param resource $handle Log file handle. $path is ignored if this
-	 *     is not null.
+	 *     is not null. Write to stderr if it's not writable.
+	 * @todo Write to syslog.
 	 */
-	public function __construct($level=null, $path=null, $handle=null) {
-		$this->level = intval($level);
+	public function __construct(
+		int $level=null, string $path=null, $handle=null
+	) {
+		$this->level = $level;
 		if (!$this->level)
 			$this->level = self::ERROR;
 		if ($handle) {
@@ -54,61 +56,42 @@ class Logger {
 	 * information.
 	 *
 	 * @param string $timestamp Timestamp, always in UTC ISO-8601.
-	 * @param int $level Log level of current log event.
+	 * @param string $levelstr String representation of current log
+	 *     level, e.g. `DEB` for debug.
 	 * @param string $msg Error message.
 	 * @return string Formatted line.
 	 */
-	protected function format($timestamp, $level, $msg) {
+	protected function format(
+		string $timestamp, string $levelstr, string $msg
+	) {
 		$fmt = "[%s] %s: %s\n";
-		return sprintf($fmt, $timestamp, $level, $msg);
+		return sprintf($fmt, $timestamp, $levelstr, $msg);
 	}
 
 	/**
 	 * Write lines as single line, with tab, CR and LF written
 	 * symbolically.
 	 */
-	private function one_line($msg) {
+	private function one_line(string $msg) {
 		$msg = trim($msg);
 		$msg = str_replace([
 			"\t", "\n", "\r",
 		], [
-			" ", '\n', '\r',
+			'\t', '\n', '\r',
 		], $msg);
 		return preg_replace('! +!', ' ', $msg);
 	}
 
 	/**
-	 * Enable writing.
-	 *
-	 * Use this to re-enable logging after temporary deactivation.
-	 */
-	final public function activate() {
-		$this->is_active = true;
-	}
-
-	/**
-	 * Disable writing.
-	 *
-	 * Useful when it is necessary to temporarily disable all
-	 * logging activities, e.g. to stop logger from writing
-	 * sensitive information.
-	 */
-	final public function deactivate() {
-		$this->is_active = false;
-	}
-
-	/**
 	 * Write to handle.
 	 */
-	private function write($level, $msg) {
-		if (!$this->is_active)
-			return;
+	private function write(string $levelstr, string $msg) {
 		$timestamp = gmdate(\DateTime::ATOM);
 			// @codeCoverageIgnoreStart
 		try {
 			// @codeCoverageIgnoreEnd
 			$msg = $this->one_line($msg);
-			$line = $this->format($timestamp, $level, $msg);
+			$line = $this->format($timestamp, $levelstr, $msg);
 			fwrite($this->handle, $line);
 			// @codeCoverageIgnoreStart
 		} catch(\Exception $e) {
@@ -121,7 +104,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function debug($msg) {
+	public function debug(string $msg) {
 		if ($this->level > self::DEBUG)
 			return;
 		$this->write('DEB', $msg);
@@ -132,7 +115,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function info($msg) {
+	public function info(string $msg) {
 		if ($this->level > self::INFO)
 			return;
 		$this->write('INF', $msg);
@@ -143,7 +126,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function warning($msg) {
+	public function warning(string $msg) {
 		if ($this->level > self::WARNING)
 			return;
 		$this->write('WRN', $msg);
@@ -154,7 +137,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function error($msg) {
+	public function error(string $msg) {
 		$this->write('ERR', $msg);
 	}
 
