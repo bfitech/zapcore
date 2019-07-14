@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 
 
 namespace BFITech\ZapCore;
@@ -32,7 +32,7 @@ class Logger {
 	 * @todo Write to syslog.
 	 */
 	public function __construct(
-		int $level=null, string $path=null, $handle=null
+		$level=null, $path=null, $handle=null
 	) {
 		$this->level = $level;
 		if (!$this->level)
@@ -62,7 +62,7 @@ class Logger {
 	 * @return string Formatted line.
 	 */
 	protected function format(
-		string $timestamp, string $levelstr, string $msg
+		$timestamp, $levelstr, $msg
 	) {
 		$fmt = "[%s] %s: %s\n";
 		return sprintf($fmt, $timestamp, $levelstr, $msg);
@@ -72,7 +72,7 @@ class Logger {
 	 * Write lines as single line, with tab, CR and LF written
 	 * symbolically.
 	 */
-	private function one_line(string $msg) {
+	private function one_line($msg) {
 		$msg = trim($msg);
 		$msg = str_replace([
 			"\t", "\n", "\r",
@@ -85,7 +85,7 @@ class Logger {
 	/**
 	 * Write to handle.
 	 */
-	private function write(string $levelstr, string $msg) {
+	private function write($levelstr, $msg) {
 		$timestamp = gmdate(\DateTime::ATOM);
 			// @codeCoverageIgnoreStart
 		try {
@@ -104,7 +104,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function debug(string $msg) {
+	public function debug($msg) {
 		if ($this->level > self::DEBUG)
 			return;
 		$this->write('DEB', $msg);
@@ -115,7 +115,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function info(string $msg) {
+	public function info($msg) {
 		if ($this->level > self::INFO)
 			return;
 		$this->write('INF', $msg);
@@ -126,7 +126,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function warning(string $msg) {
+	public function warning($msg) {
 		if ($this->level > self::WARNING)
 			return;
 		$this->write('WRN', $msg);
@@ -137,7 +137,7 @@ class Logger {
 	 *
 	 * @param string $msg Error message.
 	 */
-	public function error(string $msg) {
+	public function error($msg) {
 		$this->write('ERR', $msg);
 	}
 
