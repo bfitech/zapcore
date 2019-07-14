@@ -63,7 +63,7 @@ use PHPUnit\Framework\TestCase as PHPUnitTestCase;
  * @SuppressWarnings(PHPMD.ShortVariable)
  * @endif
  */
-class TestCase extends PHPUnitTestCase {
+abstract class TestCase extends PHPUnitTestCase {
 
 	/** Shorthand for assertEquals. */
 	public static function eq() {
