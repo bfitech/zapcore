@@ -234,9 +234,9 @@ class RouterTest extends TestCase {
 	public function test_route_post() {
 
 		$core = $this->make_router();
+		$rdev = new RoutingDev($core);
 
 		# mock request
-		$rdev = new RoutingDev($core);
 		$rdev->request('/test/z', 'POST', ['post' => ['x' => 'y']]);
 
 		# setting args['header'] via global still works; see below
@@ -253,21 +253,26 @@ class RouterTest extends TestCase {
 		$this->assertEquals($core->get_request_path(), '/test/z');
 
 		# path doesn't match
-		$core->route('/miss', function($args) use($core){
-		}, ['GET', 'POST']);
+		$eq = function($a, $b) {
+			return $this->assertEquals($a, $b);
+		};
 
 		# path matches
-		$core->route('/test/<v1>', function($args) use($core){
-			$this->assertEquals($args['get'], []);
-			$this->assertEquals($core->get_request_path(), '/test/z');
-			$this->assertEquals($core->get_request_comp(),
-				['test', 'z']);
-			$this->assertEquals($core->get_request_comp(0), 'test');
-			$this->assertEquals($core->get_request_comp(2), null);
-			$this->assertEquals($core->get_request_method(), 'POST');
-			$this->assertEquals($args['post']['x'], 'y');
-			$this->assertEquals($args['header']['referer'],
-				'http://localhost');
+		$core->route('/miss', function($args) use($core) {},
+			['GET', 'POST']);
+		# request path is properly set
+		$eq($core->get_request_path(), '/test/z');
+
+		# path matches
+		$core->route('/test/<v1>', function($args) use($core, $eq) {
+			$eq($args['get'], []);
+			$eq($core->get_request_path(), '/test/z');
+			$eq($core->get_request_comp(), ['test', 'z']);
+			$eq($core->get_request_comp(0), 'test');
+			$eq($core->get_request_comp(2), null);
+			$eq($core->get_request_method(), 'POST');
+			$eq($args['post']['x'], 'y');
+			$eq($args['header']['referer'], 'http://localhost');
 		}, 'POST');
 
 		# mock file upload
@@ -283,25 +288,25 @@ class RouterTest extends TestCase {
 				# intentionally-invalid arg key
 				'trace' => 1,
 			])
-			->route('/test/upload', function($args) use($core){
-				$this->assertEquals('whatever.dat',
-					$args['files']['myfile']['name']);
+			->route('/test/upload', function($args) use($core, $eq) {
+				$eq('whatever.dat', $args['files']['myfile']['name']);
 			}, 'POST');
-		# mock file upload via global
-		$rdev
-			->request('/test/upload', 'POST', [
-				'post' => ['x' => 'y'],
-			]);
+
+		# mock file upload via globals
+		$rdev->request('/test/upload', 'POST');
+		## cannot chain $rdev->request->route since $rdev->request
+		## always resets all HTTP vars internally
+		$_POST = ['mypost' => 'something'];
 		$_FILES = [
 			'myfile' => [
-				'name' => 'whatever.dat',
+				'name' => 'what.dat',
 				'error' => 0,
 			],
 		];
-		$core->route('/test/upload', function($args) use($core){
-				$this->assertEquals('whatever.dat',
-					$args['files']['myfile']['name']);
-			}, 'POST');
+		$core->route('/test/upload', function($args) use($core, $eq) {
+			$eq($args['post']['mypost'], 'something');
+			$eq($args['files']['myfile']['name'], 'what.dat');
+		}, 'POST');
 	}
 
 	public function test_route_get() {
