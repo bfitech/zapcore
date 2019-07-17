@@ -467,10 +467,6 @@ Available configuration items are:
     // Both $core1 and $core2 write to the same log file /tmp/myapp.log.
     ```
 
-**NOTE**: All configuration items above are available as constructor
-parameters, but they are deprecated in favor of using `Router::config`
-method.
-
 ## 4. Contributing
 
 See CONTRIBUTING.md.
