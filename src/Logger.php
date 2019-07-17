@@ -27,8 +27,10 @@ class Logger {
 	 *
 	 * @param int $level Log level.
 	 * @param string $path Path to log file. If null, stderr is used.
-	 * @param resource $handle Log file handle. $path is ignored if this
-	 *     is not null. Write to stderr if it's not writable.
+	 * @param resource $handle Log file handle. $path is set to null
+	 *     if this is not null because we can't reliably infer the path
+	 *     from a handle. Write to stderr and set path to `php://stderr`
+	 *     if it's not writable.
 	 * @todo Write to syslog.
 	 */
 	public function __construct(
@@ -38,13 +40,15 @@ class Logger {
 		if (!$this->level)
 			$this->level = self::ERROR;
 		if ($handle) {
+			$this->path = null;
 			$this->handle = $handle;
 			return;
 		}
-		$this->path = $path ? $path : 'php://stderr';
+		$this->path = $path ?? 'php://stderr';
 		try {
 			$this->handle = fopen($this->path, 'ab');
-		} catch(\Exception $e) {
+		} catch(\Exception $err) {
+			$this->path = 'php://stderr';
 			$this->handle = STDERR;
 		}
 	}
@@ -139,6 +143,39 @@ class Logger {
 	 */
 	public function error(string $msg) {
 		$this->write('ERR', $msg);
+	}
+
+	/**
+	 * Get logger resource.
+	 *
+	 * Useful for merging other logging service with Logger. Strange
+	 * behavior may arise from modifying the return. Use with care.
+	 *
+	 * #### Example
+	 *
+	 * @code
+	 * <?php
+	 *
+	 * // open a general-purpose Logger on STDERR
+	 * $log = new Logger(Logger::DEBUG);
+	 *
+	 * // map PHPMailer log level and log writer to Logger
+	 * $smtp = new \PHPMailer\PHPMailer\SMTP();
+	 * switch ($log->get_logger_resource()[0]) {
+	 *     case Logger::DEBUG:
+	 *         $smtp->setDebugLevel(4);
+	 *         $smtp->setDebugOutput([$log, 'debug']);
+	 *         break;
+	 *     default:
+	 *         $smtp->setDebugLevel(0);
+	 *         break;
+	 * }
+	 * @endcode
+	 *
+	 * @return array Log level, log path, and file handle.
+	 */
+	public function get_logger_resource() {
+		return [$this->level, $this->path, $this->handle];
 	}
 
 }

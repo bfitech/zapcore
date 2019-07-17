@@ -76,6 +76,10 @@ class LoggerTest extends TestCase {
 		$logger->error("some error");
 		$tr($this->str_in_file($fname, 'some error'));
 		$tr($this->str_in_file($fname, 'ERR'));
+
+		$res = $logger->get_logger_resource();
+		$eq($res[0], Logger::ERROR);
+		$eq($res[1], $fname);
 	}
 
 	public function test_logger_write() {
@@ -94,6 +98,10 @@ class LoggerTest extends TestCase {
 
 		$logger->warning("Some warning.");
 		$tr($this->str_in_file($fname, 'WRN'));
+
+		$res = $logger->get_logger_resource();
+		$eq($res[0], Logger::INFO);
+		$eq($res[1], $fname);
 
 		$logger->error("Some error.");
 		$tr($this->str_in_file($fname, 'ERR'));
@@ -116,18 +124,21 @@ class LoggerTest extends TestCase {
 		touch($fl3);
 
 		# file handle argument overrides file path
-		$logger = new Logger(Logger::DEBUG, $fl2,
-			fopen($fl3, 'ab'));
+		$logger = new Logger(Logger::DEBUG, $fl2, fopen($fl3, 'ab'));
 		$logger->debug("Some debug.");
+		# path becomes null
+		$nil($logger->get_logger_resource()[1]);
+		# nothing was written to initial files
 		$fl($this->str_in_file($fl2, 'DEB'));
+		# log is written to file handle instead
 		$tr($this->str_in_file($fl3, 'DEB'));
 
 		# automatically write to STDERR if file is read-only
 		chmod($fl3, 0400);
 		$logger = new Logger(Logger::DEBUG, $fl3);
-		# to not clutter terminal, use 2>/dev/null when
-		# running test
-		$logger->info("XREDIR");
+		# this will show up on screen, use 2>/dev/null to silent
+		$logger->info("XREDIR 01");
+		$eq($logger->get_logger_resource()[1], 'php://stderr');
 		$fl($this->str_in_file($fl3, 'XREDIR'));
 
 		# if chmod-ing happens after opening handle, handle is
@@ -138,6 +149,19 @@ class LoggerTest extends TestCase {
 		$logger->info("XNOWRITE");
 		$tr($this->str_in_file($fl2, 'XSTART'));
 		$tr($this->str_in_file($fl2, 'XNOWRITE'));
+
+		### simulate unwritable directory
+		chmod(self::$testdir, 0500);
+		$logger = new Logger(Logger::DEBUG, $fl3);
+		list($level, $path, $_) = $logger->get_logger_resource();
+		# level is preserved
+		$eq($level, Logger::DEBUG);
+		# path becomes /dev/stderr
+		$eq($path, 'php://stderr');
+		# this will show up on screen, use 2>/dev/null to silent
+		$logger->debug("XREDIR 02");
+		### restore permission back
+		chmod(self::$testdir, 0755);
 	}
 
 }
