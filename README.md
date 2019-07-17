@@ -192,8 +192,8 @@ $core->route('/',      [$core, 'my_home']);
 ```
 
 When request URI and request method do not match any route, a
-default 404 error page will be sent unless you set `shutdown`
-parameter to `false` in the constructor.
+default 404 error page will be sent unless you configure `shutdown`
+to `false` (see below).
 
 ```bash
 $ curl -si http://localhost:9999/hello | head -n1
@@ -299,7 +299,7 @@ $core->route('/response', [$core, 'my_response']);
 which will produce:
 
 ```bash
-$ curl -si localhost:9999/response?name=Johnny | grep -i name
+$ curl -si 'localhost:9999/response?name=Johnny' | grep -i name
 X-Name: Johnny
 ```
 
@@ -323,7 +323,7 @@ $core->route('/response', [$core, 'my_response']);
 which will produce:
 
 ```bash
-$ curl -si localhost:9999/response?name=Johnny | head -n1
+$ curl -si 'localhost:9999/response?name=Johnny' | head -n1
 HTTP/1.1 200 OK
 $ curl -si localhost:9999/response | head -n1
 HTTP/1.1 404 Not Found
@@ -363,12 +363,12 @@ which will produce:
 ```txt
 $ curl -siL localhost:9999/file | grep HTTP
 HTTP/1.1 403 Forbidden
-$ curl -siL localhost:9999/file?name=Jack | grep HTTP
+$ curl -siL 'localhost:9999/file?name=Jack' | grep HTTP
 HTTP/1.1 404 Not Found
-$ curl -siL localhost:9999/file?name=John | grep HTTP
+$ curl -siL 'localhost:9999/file?name=John' | grep HTTP
 HTTP/1.1 301 Moved Permanently
 HTTP/1.1 200 OK
-$ curl -L localhost:9999/file?name=Johnny
+$ curl -L 'localhost:9999/file?name=Johnny'
 Here's Johnny.
 ```
 

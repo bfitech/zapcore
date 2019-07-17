@@ -141,7 +141,8 @@ abstract class TestCase extends PHPUnitTestCase {
 	 *
 	 * @param string $basefile Absolute path of reference file.
 	 * @param string $dirname Test directory name. This will be appended
-	 *     to directory name of $basefile.
+	 *     to directory name of $basefile. Name with uncommon characters
+	 *     in it is not allowed.
 	 * @return string Absolute path to test data directory.
 	 */
 	final public static function tdir(
@@ -151,14 +152,14 @@ abstract class TestCase extends PHPUnitTestCase {
 			throw new \Exception(
 				"Basefile for test directory '$basefile' invalid.");
 		}
-		if (!$dirname) {
+		if (!$dirname || preg_match('![^a-z0-9\.,;\-]!i', $dirname)) {
 			throw new \Exception(
-				"Testdata directory basename is not set.");
+				"Testdata directory basename invalid.");
 		}
 		$dir = dirname($basefile) . '/' . $dirname;
 		if (!is_dir($dir) && false === @mkdir($dir, 0755)) {
 			throw new \Exception(
-				"Cannot create test directory '$basefile'.");
+				"Cannot create test directory '$dir'.");
 		}
 		return $dir;
 	}

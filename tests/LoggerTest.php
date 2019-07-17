@@ -49,7 +49,7 @@ class LoggerTest extends TestCase {
 
 		$create_testdir_ok = true;
 		try {
-			self::tdir(__FILE__, '/z/z/z');
+			self::tdir(__FILE__, "/z\n/z/z");
 		} catch(\Exception $err) {
 			$create_testdir_ok = false;
 		}
