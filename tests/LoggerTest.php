@@ -54,6 +54,19 @@ class LoggerTest extends TestCase {
 			$create_testdir_ok = false;
 		}
 		$fl($create_testdir_ok);
+
+		$basefile = self::$testdir . '/anchor.log';
+		touch($basefile);
+		chmod(self::$testdir, 0500);
+		$create_testdir_ok = true;
+		try {
+			self::tdir($basefile, "subdir");
+		} catch(\Exception $err) {
+			$create_testdir_ok = false;
+		}
+		$fl($create_testdir_ok);
+		chmod(self::$testdir, 0755);
+		unlink($basefile);
 	}
 
 	public function test_constructor() {
