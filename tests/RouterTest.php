@@ -39,12 +39,13 @@ class RouterTest extends TestCase {
 		self::$logger = new Logger(Logger::DEBUG, $logfile);
 	}
 
-	private function make_router() {
-		return (new RouterDev())
+	private function make_routing() {
+		$rdev = new RoutingDev;
+		$rdev::$core
 			->config('home', '/')
 			->config('host', 'http://localhost/')
-			->config('logger', self::$logger)
-			->init();
+			->config('logger', self::$logger);
+		return [$rdev, $rdev::$core];
 	}
 
 	public function test_default() {
@@ -52,16 +53,16 @@ class RouterTest extends TestCase {
 
 		# abort 404
 		ob_start();
-		$core = new RouterDefault();
+		$core = new RouterDefault;
 		$core
 			->route('/s', function(){})
 			->shutdown();
 		$rv = ob_get_clean();
 		$this->ne()(strpos($rv, '404'), false);
-		$core->deinit();
 
 		# redirect
 		ob_start();
+		$core = new RouterDefault;
 		$core
 			->route('/', function($args) use($core){
 				$core->redirect('/somewhere_else');
@@ -69,10 +70,10 @@ class RouterTest extends TestCase {
 			->shutdown();
 		$rv = ob_get_clean();
 		$this->ne()(strpos($rv, '301 Moved'), false);
-		$core->deinit();
 
 		# send file
 		ob_start();
+		$core = new RouterDefault;
 		$core->route('/', function($args) use($core){
 			$core->static_file(__FILE__);
 		});
@@ -83,7 +84,7 @@ class RouterTest extends TestCase {
 	public function test_route_dev() {
 		extract(self::vars());
 
-		$core = new RouterDev();
+		$core = new RouterDev;
 
 		# test fake cookie
 		unset($_COOKIE);
@@ -97,8 +98,8 @@ class RouterTest extends TestCase {
 	public function test_route() {
 		extract(self::vars());
 
-		# Override autodetect since we're on the CLI.
-		$core = (new RouterDev())
+		### override autodetect since we're on the CLI
+		$core = (new RouterDev)
 			->config('home', '/')
 			->config('host', 'http://localhost')
 			->config('shutdown', false)
@@ -108,7 +109,7 @@ class RouterTest extends TestCase {
 		$eq($core->get_home(), '/');
 		$eq($core->get_host(), 'http://localhost/');
 
-		$rdev = new RoutingDev($core);
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/x/X', 'POST', ['post' => ['a' => 1]])
 			->config('home', '/')
@@ -116,27 +117,28 @@ class RouterTest extends TestCase {
 				$eq($core->get_request_path(), '/x/X');
 				echo $args['params']['x'];
 			}, 'POST')
-			->config('eh', 'lol') # config or init here has no effect
+			### config or init here has no effect
+			->config('eh', 'lol')
+			### matching the same route twice only affects the first
 			->route('/x/<x>', function($args){
-				# matching the same route twice only affects the first
 				echo $args['params']['x'];
 			}, 'POST');
 		$eq($core::$body_raw, 'X');
 
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/hello/john', 'PATCH')
 			# compound path doesn't match
-			->route('/hey/<person>', function($args){
-			})
+			->route('/hey/<person>', function(){})
 			# must call shutdown manually
 			->shutdown();
 		# PATCH is never registered in routes, hence 501
-		$eq(501, $core::$code);
+		$eq(501, $rdev::$core::$code);
 
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/x/X')
-			->route('/hey/<person>', function($args){
-			})
+			->route('/hey/<person>', function(){})
 			->shutdown();
 		# GET is registered but no route matches, hence 404
 		$eq(404, $core::$code);
@@ -149,19 +151,17 @@ class RouterTest extends TestCase {
 	public function test_path_parser() {
 		extract(self::vars());
 
-		$core = $this->make_parser();
-
 		# regular
-		$rv = $core->path_parser('/x/y/');
+		$rv = Router::path_parser('/x/y/');
 		$eq($rv[0], '/x/y');
 		$eq($rv[1], []);
 
 		# short var
-		$rv = $core->path_parser('/@x/<v1>/y/<v2>/z');
+		$rv = Router::path_parser('/@x/<v1>/y/<v2>/z');
 		$sm($rv[1], ['v1', 'v2']);
 
 		# long var
-		$rv = $core->path_parser('/x/<v1>/y/{v2}/1:z');
+		$rv = Router::path_parser('/x/<v1>/y/{v2}/1:z');
 		$sm($rv[1], ['v1', 'v2']);
 	}
 
@@ -239,30 +239,21 @@ class RouterTest extends TestCase {
 			echo "SLEEPING";
 		});
 		$eq($core::$body_raw, "SLEEPING");
-		$core->deinit()->reset();
 	}
 
 	public function test_route_post() {
 		$eq = self::eq();
 
-		$core = $this->make_router();
-		$rdev = new RoutingDev($core);
-
-		# mock request
+		list($rdev, $core) = $this->make_routing();
 		$rdev->request('/test/z', 'POST', ['post' => ['x' => 'y']]);
-
 		# setting args['header'] via global still works; see below
-		$_SERVER['HTTP_REFERER'] = 'http://localhost';
-
+		$_SERVER['HTTP_REFERER'] = 'http://example.tld';
 		# no request path set until $core->route is called at least once
 		$eq($core->get_request_path(), null);
-
 		# path doesn't match
-		$core->route('/miss', function($args) use($core) {},
-			['GET', 'POST']);
+		$core->route('/miss', function() {}, ['GET', 'POST']);
 		# request path is properly set
 		$eq($core->get_request_path(), '/test/z');
-
 		# path matches
 		$core->route('/test/<v1>', function($args) use($core, $eq) {
 			$eq($args['get'], []);
@@ -272,8 +263,9 @@ class RouterTest extends TestCase {
 			$eq($core->get_request_comp(2), null);
 			$eq($core->get_request_method(), 'POST');
 			$eq($args['post']['x'], 'y');
-			$eq($args['header']['referer'], 'http://localhost');
+			$eq($args['header']['referer'], 'http://example.tld');
 		}, 'POST');
+		$eq($core::$code, 200);
 
 		# mock file upload
 		$rdev
@@ -312,9 +304,7 @@ class RouterTest extends TestCase {
 	public function test_route_get() {
 		$eq = self::eq();
 
-		$core = $this->make_router();
-		$rdev = new RoutingDev($core);
-
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/getme/', 'GET', ['get' => ['x' => 'y']])
 			->route('/getme', function($args) use($core, $eq){
@@ -324,6 +314,7 @@ class RouterTest extends TestCase {
 		$eq($core->get_request_path(), '/getme');
 		$eq($core::$body_raw, 'OK');
 
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/getjson/', 'GET', ['get' => ['x' => 'y']])
 			->route('/getjson', function($args) use($core, $eq){
@@ -337,9 +328,7 @@ class RouterTest extends TestCase {
 	public function test_route_patch() {
 		$eq = self::eq();
 
-		$core = $this->make_router();
-		$rdev = new RoutingDev($core);
-
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/patchme/', 'PATCH',
 				['patch' => 'hello'])
@@ -351,39 +340,30 @@ class RouterTest extends TestCase {
 	}
 
 	public function test_route_trace() {
-		$core = $this->make_router();
-		$rdev = new RoutingDev($core);
-
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/traceme/', 'TRACE')
-			->route('/traceme', function($args){
-			}, 'TRACE');
+			->route('/traceme', function($args){}, 'TRACE');
 		# regardless the request, TRACE will always give 405
 		self::eq()($core::$code, 405);
 	}
 
 	public function test_route_notfound() {
-		$core = $this->make_router();
-		$rdev = new RoutingDev($core);
-
-		$rdev->request('/findme/');
-
-		# without this top-level route, $core->shutdown()
-		# will set 501
-		$core->route('/', function($args){
-		});
-
-		# must invoke shutdown manually since no path matches
-		$core->shutdown();
+		list($rdev, $core) = $this->make_routing();
+		$rdev
+			->request('/findme/')
+			# without this top-level route, $core->shutdown()
+			# will set 501
+			->route('/', function($args){})
+			# must invoke shutdown manually since no path matches
+			->shutdown();
 		self::eq()($core::$code, 404);
 	}
 
 	public function test_route_static() {
 		$eq = self::eq();
 
-		$core = $this->make_router();
-		$rdev = new RoutingDev($core);
-
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/static/' . basename(__FILE__))
 			->route('/static/<path>', function($args) use($core, $eq){
@@ -393,6 +373,7 @@ class RouterTest extends TestCase {
 				$eq($core::$body_raw, file_get_contents(__FILE__));
 			});
 
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/static/notfound.txt')
 			->route('/static/<path>', function($args) use($core){
@@ -405,9 +386,7 @@ class RouterTest extends TestCase {
 	public function test_route_abort() {
 		$eq = self::eq();
 
-		$core = $this->make_router();
-		$rdev = new RoutingDev($core);
-
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/notfound')
 			->route('/', function($args) use($core) {
@@ -417,10 +396,10 @@ class RouterTest extends TestCase {
 			->shutdown();
 		$eq($core::$code, 404);
 
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/notfound', 'POST')
 			->shutdown();
-
 		# POST is never registered, hence, POST request will give 501
 		$eq($core::$code, 501);
 	}
@@ -428,22 +407,13 @@ class RouterTest extends TestCase {
 	public function test_route_redirect() {
 		$eq = self::eq();
 
-		$core = $this->make_router();
-		$rdev = new RoutingDev($core);
-
+		list($rdev, $core) = $this->make_routing();
 		$rdev
 			->request('/redirect')
 			->route('/redirect', function($args) use($core) {
 				$core->redirect('/destination');
 			}, 'GET');
 		$eq($core::$code, 301);
-
-		# we can reuse the request here
-		$core->route('/redirect', function($args) use($core) {
-				$core->redirect('/destination');
-			}, 'GET');
-		self::tr()(in_array('Location: /destination',
-			$core::$head));
 	}
 
 }

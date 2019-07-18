@@ -17,7 +17,7 @@ namespace BFITech\ZapCoreDev;
  * @code
  * <?php
  *
- * $rdev = new RoutingDev();
+ * $rdev = new RoutingDev;
  * $core = $rdev::$core;
  *
  * $rdev
@@ -42,13 +42,9 @@ class RoutingDev {
 
 	/**
 	 * Constructor.
-	 *
-	 * @param RouterDev $core RouterDev instance. Optional. Since the
-	 *     router this sets is made public and static, you can always
-	 *     patch as you go.
 	 */
-	public function __construct(RouterDev $core=null) {
-		self::$core = ($core != null) ? $core : new RouterDev;
+	public function __construct() {
+		self::$core = new RouterDev;
 	}
 
 	/**
@@ -78,7 +74,7 @@ class RoutingDev {
 		string $request_uri=null, string $request_method='GET',
 		array $args=null, array $cookie=[]
 	) {
-		self::$core->deinit()->reset();
+		self::$core->reset();
 		self::$core->config('home', '/');
 
 		# just set global cookie and nothing else

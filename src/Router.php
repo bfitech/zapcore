@@ -127,29 +127,6 @@ class Router extends Header {
 	}
 
 	/**
-	 * Reset properties to default values.
-	 *
-	 * Mostly useful for testing, so that you don't have to repeatedly
-	 * instantiate the object.
-	 */
-	final public function deinit() {
-		$this->request_path = null;
-		$this->request_comp = [];
-
-		$this->home = null;
-		$this->host = null;
-		$this->auto_shutdown = true;
-
-		$this->request_initted = false;
-		$this->request_handled = false;
-
-		$this->request_method = null;
-		$this->method_collection = [];
-
-		return $this;
-	}
-
-	/**
 	 * Autodetect home.
 	 *
 	 * Naive home detection. Works on standard mod_php, mod_fcgid,
