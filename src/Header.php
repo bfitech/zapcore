@@ -177,70 +177,87 @@ class Header {
 	}
 
 	/**
+	 * Generate Etag.
+	 *
+	 * This is a very basic Etag generation. Patch this with your more
+	 * collision-resistant implementation.
+	 *
+	 * @param string $path File path.
+	 * @return string Etag.
+	 */
+	public static function gen_etag(string $path) {
+		$fph = fopen($path, 'r');
+		$cnt = fread($fph, 1024 ** 2);
+		fclose($fph);
+		return crc32($cnt);
+	}
+
+	private static function check_etag(
+		string $path, array $reqheaders
+	) {
+		$etag = $reqheaders['if_none_match'] ?? null;
+		if (!$etag)
+			return false;
+		return static::gen_etag($path) === $etag;
+	}
+
+	/**
 	 * Send file.
 	 *
-	 * Using higher-level Route::static_file_default is enough for
-	 * standard usage. Wrap this in Route::static_file_custom to make
-	 * a more elaborate static file serving instead of calling it
-	 * directly.
+	 * Use the higher-level Route::static_file for integration with
+	 * a router.
 	 *
-	 * @param string $fpath Path to file.
+	 * @param string $path Path to file.
 	 * @param mixed $disposition If set as string, this will be used
 	 *     as filename on content disposition. If true, content
 	 *     disposition is inferred from basename. Otherwise, no
 	 *     content disposition header is sent.
-	 * @param int $code HTTP code. Typically it's 200, but this can
-	 *     be anything since we can serve, e.g. 404 with a text file.
 	 * @param int $cache Cache age, 0 for no cache.
 	 * @param array $headers Additional headers.
-	 * @param bool $xsendfile If true, response is delegated to
-	 *     web server. Appropriate header must be set via $headers,
-	 *     e.g.: `X-Accel-Redirect` on Nginx or `X-Sendfile` on
-	 *     Apache.
+	 * @param array $reqheaders Request headers passed from router.
+	 *     Useful to process Etag and other things.
+	 * @param bool $noread If true, file is not read. Useful when file
+	 *     is served by other means such as sending $header
+	 *     `X-Accel-Redirect` on Nginx or `X-Sendfile` on Apache.
 	 * @param callable $callback_notfound What to do when the file
 	 *     is not found. If no callback is provided, the method will
 	 *     just immediately halt.
 	 */
 	public static function send_file(
-		string $fpath, $disposition=null, int $code=200,
-		int $cache=0, array $headers=[], bool $xsendfile=null,
-		callable $callback_notfound=null
+		string $path, int $cache=0, $disposition=null,
+		array $headers=[], array $reqheaders=[],
+		bool $noread=null, callable $callback_notfound=null
 	) {
 
-		if (!file_exists($fpath) || is_dir($fpath)) {
+		if (!file_exists($path) || is_dir($path)) {
 			static::start_header(404, 0, $headers);
-			if (is_callable($callback_notfound)) {
+			if (is_callable($callback_notfound))
 				$callback_notfound();
-				static::halt();
-			}
-			return;
+			return static::halt();
 		}
 
-		static::start_header($code, $cache, $headers);
+		if (self::check_etag($path, $reqheaders)) {
+			static::start_header(304, $cache, $headers);
+			return static::halt();
+		}
 
 		$hdr = function($header) {
 			return static::header($header);
 		};
 
-		$hdr('Content-Length: ' . filesize($fpath));
-		$hdr("Content-Type: " . Common::get_mimetype($fpath));
-
+		static::start_header(200, $cache, $headers);
+		$hdr('Content-Length: ' . filesize($path));
+		$hdr("Content-Type: " . Common::get_mimetype($path));
+		$hdr('Etag: ' . static::gen_etag($path));
 		if ($disposition) {
 			if ($disposition === true)
-				$disposition = basename($fpath);
+				$disposition = basename($path);
 			$disposition = htmlspecialchars($disposition, ENT_QUOTES);
 			$hdr("Content-Disposition: attachment; " .
 				"filename=\"$disposition\"");
 		}
-
-		if (!$xsendfile) {
-			$fph = fopen($fpath, 'r');
-			$cnt = fread($fph, 1024 ** 2);
-			fclose($fph);
-			$hdr('Etag: ' . crc32($cnt));
-			readfile($fpath);
-		}
-
+		if (!$noread)
+			readfile($path);
 		static::halt();
 	}
 
@@ -256,7 +273,7 @@ class Header {
 		int $errno=0, $data=null, int $http_code=200, int $cache=0
 	) {
 		$json = json_encode(compact('errno', 'data'));
-		self::start_header($http_code, $cache, [
+		static::start_header($http_code, $cache, [
 			'Content-Length: ' . strlen($json),
 			'Content-Type: application/json',
 		]);
@@ -293,7 +310,7 @@ class Header {
 		}
 		if (!isset($retval[1]))
 			$retval[1] = null;
-		self::print_json($retval[0], $retval[1], $http_code, $cache);
+		static::print_json($retval[0], $retval[1], $http_code, $cache);
 	}
 
 }

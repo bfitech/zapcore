@@ -4,6 +4,7 @@
 namespace BFITech\ZapCoreDev;
 
 
+use BFITech\ZapCore\Common;
 use BFITech\ZapCore\Router;
 
 
@@ -175,23 +176,32 @@ class RouterDev extends Router {
 	 * Custom static file serving for testing.
 	 *
 	 * @param string $path Absolute path to file.
-	 * @param int $cache Cache age in seconds.
-	 * @param mixed $disposition If string, use it as
-	 *     content-disposition in header. If true, infer from basename.
-	 *     If null, no content-disposition header is sent.
+	 * @param array $kwargs Additional arguments. See
+	 *     BFITech\\ZapCore\\Router::static_file.
 	 *
 	 * @cond
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
 	 * @endcond
 	 */
 	public function static_file_custom(
-		string $path, int $cache=0, $disposition=null
+		string $path, array $kwargs=[]
 	) {
+		extract(Common::extract_kwargs($kwargs, [
+			'cache' => 0,
+			'disposition' => null,
+			'headers' => [],
+			'reqheaders' => [],
+			'xsendfile' => false,
+			'callback_notfound' => function() {
+				return $this->abort(404);
+			},
+		]));
 		self::reset();
 		if (file_exists($path)) {
 			self::$code = 200;
 			self::$body_raw = file_get_contents($path);
 			self::$body = "Path: $path";
+			self::$head = $headers;
 			self::$errno = 0;
 			self::$data = [$path];
 		} else {

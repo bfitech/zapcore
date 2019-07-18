@@ -10,6 +10,11 @@ class HeaderPatched extends Header {
 	public static $code = 200;
 	public static $head = [];
 
+	public function __construct() {
+		static::$code = 200;
+		static::$head = [];
+	}
+
 	public static function header(
 		string $header_string, bool $replace=false
 	) {
@@ -29,15 +34,12 @@ class HeaderPatched extends Header {
 
 class HeaderTest extends TestCase {
 
-	public function setUp() {
-		HeaderPatched::$code = 200;
-		HeaderPatched::$head = [];
-	}
-
-	private function ele_starts_with($array, $str) {
-		return count(array_filter($array, function($ele) use($str) {
-			return strpos($ele, $str) === 0;
-		})) > 0;
+	private static function get_header(HeaderPatched $hdr, $key) {
+		return array_values(array_filter($hdr::$head,
+			function($ele) use($key) {
+				return strpos($ele, "$key:") !== false;
+			}
+		));
 	}
 
 	public function test_start_header() {
@@ -47,57 +49,92 @@ class HeaderTest extends TestCase {
 		$header_string = $hdr::get_header_string(-1);
 		$eq($header_string['code'], 404);
 
+		$hdr = new HeaderPatched;
 		$hdr::start_header(200, 3600);
 		$eq($hdr::$code, 200);
-		$fl($this->ele_starts_with($hdr::$head, 'Pragma'));
+		$pragmas = self::get_header($hdr, 'Pragma');
+		$eq(count($pragmas), 0);
 
+		$hdr = new HeaderPatched;
 		$hdr::start_header(404, 0, [
 			'X-Will-Work-For-Food: 1',
 		]);
+		$pragmas = self::get_header($hdr, 'Pragma');
+		$eq(count($pragmas), 1);
 		$eq($hdr::$code, 404);
-		$tr($this->ele_starts_with($hdr::$head, 'Pragma'));
 	}
 
 	public function test_send_file() {
 		extract(self::vars());
 
+		# default
 		$hdr = new HeaderPatched;
-		$hdr::send_file(__FILE__, true,
-			200, 0, ['X-Sendfile: ' . __FILE__], true);
-		$eq($hdr::$code, 200);
-
-		$hdr::$head = [];
-		$hdr::send_file(__FILE__ . 'x', true,
-			200, 0, ['X-Sendfile: ' . __FILE__], true);
-		$eq($hdr::$code, 404);
-
-		$hdr::$head = [];
-		ob_start();
-		$hdr::send_file(__FILE__ . '.log', null,
-			200, 0, [], false, function(){
-				echo __FILE__;
-			});
-		$rv = ob_get_clean();
-		$eq($hdr::$code, 404);
-		$eq($rv, __FILE__);
-
-		$hdr::$head = [];
 		ob_start();
 		$hdr::send_file(__FILE__);
-		$rv = ob_get_clean();
+		ob_get_clean();
 		$eq($hdr::$code, 200);
-		$eq($rv, file_get_contents(__FILE__));
+
+		# not found
+		$hdr = new HeaderPatched;
+		$hdr::send_file(__FILE__ . 'x');
+		$eq($hdr::$code, 404);
+
+		# not found with custom abort
+		$hdr = new HeaderPatched;
+		ob_start();
+		$hdr::send_file(__FILE__ . '.log', 0, null, [], [], null,
+			function(){
+				echo 'missing';
+			}
+		);
+		$eq($hdr::$code, 404);
+		$eq(ob_get_clean(), 'missing');
+
+		# disposition string
+		$hdr = new HeaderPatched;
+		ob_start();
+		$hdr::send_file(__FILE__, 0, 'my-file.log');
+		$eq($hdr::$code, 200);
+		$disp = self::get_header($hdr, 'Content-Disposition')[0];
+		$tr(strpos($disp, 'my-file.log') !== false);
+		$eq(ob_get_clean(), file_get_contents(__FILE__));
+
+		# disposition true
+		$hdr = new HeaderPatched;
+		ob_start();
+		$hdr::send_file(__FILE__, 0, true);
+		$eq(ob_get_clean(), file_get_contents(__FILE__));
+		$eq($hdr::$code, 200);
+		$disp = self::get_header($hdr, 'Content-Disposition')[0];
+		$tr(strpos($disp, basename(__FILE__)) !== false);
+
+		# etag matches, 304 is sent without body
+		$hdr = new HeaderPatched;
+		ob_start();
+		$hdr::send_file(__FILE__, 0, null, [], [
+			'if_none_match' => $hdr::gen_etag(__FILE__),
+		]);
+		$ne(ob_get_clean(), file_get_contents(__FILE__));
+		$eq($hdr::$code, 304);
+
+		# etag doesn't match
+		ob_start();
+		$hdr::send_file(__FILE__, 0, null, [], [
+			'if_none_match' => 'x' . $hdr::gen_etag(__FILE__),
+		]);
+		$eq(ob_get_clean(), file_get_contents(__FILE__));
+		$eq($hdr::$code, 200);
 	}
 
 	public function test_print_json() {
 		extract(self::vars());
 
-		ob_start();
 		$hdr = new HeaderPatched;
+		ob_start();
 		$hdr::print_json();
 		extract(json_decode(ob_get_clean(), true));
-		$tr($this->ele_starts_with(
-			$hdr::$head, 'Content-Type: application/json'));
+		$mime = self::get_header($hdr, 'Content-Type')[0];
+		$tr(strpos($mime, 'application/json') !== false);
 		$eq($hdr::$code, 200);
 		$eq($errno, 0);
 		$nil($data);
@@ -106,21 +143,24 @@ class HeaderTest extends TestCase {
 	public function test_pj() {
 		extract(self::vars());
 
-		ob_start();
+		# valid
 		$hdr = new HeaderPatched;
+		ob_start();
 		$hdr::pj([1, null], 403);
 		extract(json_decode(ob_get_clean(), true));
-		$tr($this->ele_starts_with(
-			$hdr::$head, 'Content-Type: application/json'));
+		$mime = self::get_header($hdr, 'Content-Type')[0];
+		$tr(strpos($mime, 'application/json') !== false);
 		$eq($hdr::$code, 403);
 		$eq($errno, 1);
+		$nil($data);
 
-		ob_start();
 		# invalid first arg
+		$hdr = new HeaderPatched;
+		ob_start();
 		$hdr::pj(1, 403);
 		extract(json_decode(ob_get_clean(), true));
-		$tr($this->ele_starts_with(
-			$hdr::$head, 'Content-Type: application/json'));
+		$mime = self::get_header($hdr, 'Content-Type')[0];
+		$tr(strpos($mime, 'application/json') !== false);
 		# will send HTTP 500 regardless the forbidden code value
 		$eq($hdr::$code, 500);
 		$eq($errno, -1);

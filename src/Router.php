@@ -661,13 +661,23 @@ class Router extends Header {
 
 	/**
 	 * Default static file.
+	 *
+	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
 	 */
-	private function static_file_default(
-		string $path, int $cache=0, string $disposition=null
-	) {
-		if (file_exists($path))
-			static::send_file($path, $disposition, 200, $cache);
-		$this->abort(404);
+	private function static_file_default(string $path, array $kwargs) {
+		extract(Common::extract_kwargs($kwargs, [
+			'cache' => 0,
+			'disposition' => null,
+			'headers' => [],
+			'reqheaders' => [],
+			'noread' => false,
+			'callback_notfound' => function() {
+				return $this->abort(404);
+			},
+		]));
+		static::send_file($path, $cache, $disposition, $headers,
+			$reqheaders, $noread, $callback_notfound);
+		static::halt();
 	}
 
 	/**
@@ -677,19 +687,22 @@ class Router extends Header {
 	 * a subclass.
 	 *
 	 * @param string $path Absolute path to file.
-	 * @param int $cache Cache age in seconds.
-	 * @param mixed $disposition If string, use it as
-	 *     content-disposition in header. If true, infer from basename.
-	 *     If null, no content-disposition header is sent.
+	 * @param array $kwargs Additional arguments, a dict with keys:
+	 *     - cache: int Cache age, in seconds. Default: 0.
+	 *     - disposition: string|true|null Content disposition. If true,
+	 *         disposition is inferred from filename. Default: null.
+	 *     - headers: array Additional response headers, e.g. X-Sendfile
+	 *         header, default: [].
+	 *     - reqheaders: array Request headers passed from router.
+	 *     - noread: bool Don't read the file. Send headers only.
+	 *     - callback_notfound: callable Callback when the file is
+	 *         missing, defaults to Router::abort(404).
 	 */
-	final public function static_file(
-		string $path, int $cache=0, $disposition=null
-	) {
+	final public function static_file(string $path, array $kwargs=[]) {
 		self::$logger->info("Router: static: '$path'.");
-		if (!method_exists($this, 'static_file_custom'))
-			return $this->static_file_default($path, $cache,
-				$disposition);
-		return $this->static_file_custom($path, $cache, $disposition);
+		if (method_exists($this, 'static_file_custom'))
+			return $this->static_file_custom($path, $kwargs);
+		return $this->static_file_default($path, $kwargs);
 	}
 
 	/**
