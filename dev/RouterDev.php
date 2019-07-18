@@ -69,13 +69,17 @@ class RouterDev extends Router {
 	/**
 	 * Patched Header::send_cookie().
 	 *
+	 * Expiration is just 0 or 1. If 1, cookie is set, otherwise, cookie
+	 * is considered stale and unset if exists.
+	 *
 	 * @cond
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
 	 * @endcond
 	 */
 	public static function send_cookie(
-		$name, $value='', $expire=0, $path='', $domain='',
-		$secure=false, $httponly=false
+		string $name, string $value='', int $expire=1,
+		string $path='', string $domain='',
+		bool $secure=false, bool $httponly=false
 	) {
 		if (!isset($_COOKIE))
 			$_COOKIE = [];
@@ -110,7 +114,7 @@ class RouterDev extends Router {
 			$args[$key] = $val;
 		$callback($args);
 		self::$body_raw = ob_get_clean();
-		self::$body = json_decode(self::$body_raw, true);
+		self::$body = @json_decode(self::$body_raw, true);
 		if (self::$body) {
 			self::$errno = self::$body['errno'];
 			self::$data = self::$body['data'];

@@ -186,7 +186,7 @@ class Header {
 	 *
 	 * @param string $fpath Path to file.
 	 * @param mixed $disposition If set as string, this will be used
-	 *     as filename on content disposition. If set to true, content
+	 *     as filename on content disposition. If true, content
 	 *     disposition is inferred from basename. Otherwise, no
 	 *     content disposition header is sent.
 	 * @param int $code HTTP code. Typically it's 200, but this can
@@ -202,8 +202,8 @@ class Header {
 	 *     just immediately halt.
 	 */
 	public static function send_file(
-		string $fpath, $disposition=null, int $code=200, int $cache=0,
-		array $headers=[], bool $xsendfile=null,
+		string $fpath, $disposition=null, int $code=200,
+		int $cache=0, array $headers=[], bool $xsendfile=null,
 		callable $callback_notfound=null
 	) {
 
@@ -218,20 +218,28 @@ class Header {
 
 		static::start_header($code, $cache, $headers);
 
-		static::header('Content-Length: ' . filesize($fpath));
-		static::header("Content-Type: " . Common::get_mimetype($fpath));
+		$hdr = function($header) {
+			return static::header($header);
+		};
+
+		$hdr('Content-Length: ' . filesize($fpath));
+		$hdr("Content-Type: " . Common::get_mimetype($fpath));
 
 		if ($disposition) {
 			if ($disposition === true)
-				$disposition = htmlspecialchars(
-					basename($fpath), ENT_QUOTES);
-			static::header(sprintf(
-				'Content-Disposition: attachment; filename="%s"',
-				$disposition));
+				$disposition = basename($fpath);
+			$disposition = htmlspecialchars($disposition, ENT_QUOTES);
+			$hdr("Content-Disposition: attachment; " .
+				"filename=\"$disposition\"");
 		}
 
-		if (!$xsendfile)
+		if (!$xsendfile) {
+			$fph = fopen($fpath, 'r');
+			$cnt = fread($fph, 1024 ** 2);
+			fclose($fph);
+			$hdr('Etag: ' . crc32($cnt));
 			readfile($fpath);
+		}
 
 		static::halt();
 	}
