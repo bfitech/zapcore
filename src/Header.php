@@ -5,66 +5,68 @@ namespace BFITech\ZapCore;
 
 
 /**
- * Header class.
+ * Response header class.
  */
 class Header {
 
 	/**
 	 * HTTP response header strings.
 	 */
-	public static $header_string = [
-		100 => 'Continue',
-		101 => 'Switching Protocols',
-		102 => 'Processing',
-		200 => 'OK',
-		201 => 'Created',
-		202 => 'Accepted',
-		203 => 'Non-Authoritative Information',
-		204 => 'No Content',
-		205 => 'Reset Content',
-		206 => 'Partial Content',
-		207 => 'Multi-Status',
-		226 => 'IM Used',
-		300 => 'Multiple Choices',
-		301 => 'Moved Permanently',
-		302 => 'Found',
-		303 => 'See Other',
-		304 => 'Not Modified',
-		305 => 'Use Proxy',
-		306 => 'Reserved',
-		307 => 'Temporary Redirect',
-		400 => 'Bad Request',
-		401 => 'Unauthorized',
-		402 => 'Payment Required',
-		403 => 'Forbidden',
-		404 => 'Not Found',
-		405 => 'Method Not Allowed',
-		406 => 'Not Acceptable',
-		407 => 'Proxy Authentication Required',
-		408 => 'Request Timeout',
-		409 => 'Conflict',
-		410 => 'Gone',
-		411 => 'Length Required',
-		412 => 'Precondition Failed',
-		413 => 'Request Entity Too Large',
-		414 => 'Request-URI Too Long',
-		415 => 'Unsupported Media Type',
-		416 => 'Requested Range Not Satisfiable',
-		417 => 'Expectation Failed',
-		422 => 'Unprocessable Entity',
-		423 => 'Locked',
-		424 => 'Failed Dependency',
-		426 => 'Upgrade Required',
-		500 => 'Internal Server Error',
-		501 => 'Not Implemented',
-		502 => 'Bad Gateway',
-		503 => 'Service Unavailable',
-		504 => 'Gateway Timeout',
-		505 => 'HTTP Version Not Supported',
-		506 => 'Variant Also Negotiates',
-		507 => 'Insufficient Storage',
-		510 => 'Not Extended'
-	];
+	final public static function header_strings() {
+		return [
+			100 => 'Continue',
+			101 => 'Switching Protocols',
+			102 => 'Processing',
+			200 => 'OK',
+			201 => 'Created',
+			202 => 'Accepted',
+			203 => 'Non-Authoritative Information',
+			204 => 'No Content',
+			205 => 'Reset Content',
+			206 => 'Partial Content',
+			207 => 'Multi-Status',
+			226 => 'IM Used',
+			300 => 'Multiple Choices',
+			301 => 'Moved Permanently',
+			302 => 'Found',
+			303 => 'See Other',
+			304 => 'Not Modified',
+			305 => 'Use Proxy',
+			306 => 'Reserved',
+			307 => 'Temporary Redirect',
+			400 => 'Bad Request',
+			401 => 'Unauthorized',
+			402 => 'Payment Required',
+			403 => 'Forbidden',
+			404 => 'Not Found',
+			405 => 'Method Not Allowed',
+			406 => 'Not Acceptable',
+			407 => 'Proxy Authentication Required',
+			408 => 'Request Timeout',
+			409 => 'Conflict',
+			410 => 'Gone',
+			411 => 'Length Required',
+			412 => 'Precondition Failed',
+			413 => 'Request Entity Too Large',
+			414 => 'Request-URI Too Long',
+			415 => 'Unsupported Media Type',
+			416 => 'Requested Range Not Satisfiable',
+			417 => 'Expectation Failed',
+			422 => 'Unprocessable Entity',
+			423 => 'Locked',
+			424 => 'Failed Dependency',
+			426 => 'Upgrade Required',
+			500 => 'Internal Server Error',
+			501 => 'Not Implemented',
+			502 => 'Bad Gateway',
+			503 => 'Service Unavailable',
+			504 => 'Gateway Timeout',
+			505 => 'HTTP Version Not Supported',
+			506 => 'Variant Also Negotiates',
+			507 => 'Insufficient Storage',
+			510 => 'Not Extended'
+		];
+	}
 
 	/**
 	 * Get HTTP code.
@@ -74,11 +76,12 @@ class Header {
 	 *     `$code` is valid, 404 dict otherwise.
 	 */
 	final public static function get_header_string(int $code) {
-		if (!isset(self::$header_string[$code]))
+		$lookup = self::header_strings();
+		if (!isset($lookup[$code]))
 			$code = 404;
 		return [
 			'code' => $code,
-			'msg'  => self::$header_string[$code],
+			'msg'  => $lookup[$code],
 		];
 	}
 
@@ -127,8 +130,9 @@ class Header {
 	 * @codeCoverageIgnore
 	 */
 	public static function send_cookie(
-		$name, $value='', $expire=0, $path='', $domain='',
-		$secure=false, $httponly=false
+		string $name, string $value='', int $expire=0,
+		string $path='', string $domain='',
+		bool $secure=false, bool $httponly=false
 	) {
 		@setcookie($name, $value, $expire, $path, $domain,
 			$secure, $httponly);
@@ -147,30 +151,29 @@ class Header {
 		$msg = 'OK';
 		extract(self::get_header_string($code));
 
-		$proto = isset($_SERVER['SERVER_PROTOCOL'])
-			? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.1';
-		static::header("$proto $code $msg");
+		$hdr = function($header) {
+			return static::header($header);
+		};
+
+		$proto = $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.1';
+		$hdr("$proto $code $msg");
 		if ($cache) {
-			$cache = intval($cache);
-			$expire = time() + $cache;
-			static::header("Expires: " .
-				gmdate("D, d M Y H:i:s", $expire)." GMT");
-			static::header("Cache-Control: must-revalidate");
+			$hdr("Expires: " .
+				gmdate("D, d M Y H:i:s", time() + $cache) . " GMT");
+			$hdr("Cache-Control: must-revalidate");
 		} else {
-			static::header("Expires: Mon, 27 Jul 1996 07:00:00 GMT");
-			static::header(
-				"Cache-Control: no-store, no-cache, must-revalidate");
-			static::header("Cache-Control: post-check=0, pre-check=0");
-			static::header("Pragma: no-cache");
+			$hdr("Expires: Mon, 27 Jul 1996 07:00:00 GMT");
+			$hdr("Cache-Control: no-store, no-cache, must-revalidate");
+			$hdr("Cache-Control: post-check=0, pre-check=0");
+			$hdr("Pragma: no-cache");
 		}
-		static::header("Last-Modified: " .
-			gmdate("D, d M Y H:i:s")." GMT");
-		static::header("X-Powered-By: Zap!", true);
+		$hdr("Last-Modified: " . gmdate("D, d M Y H:i:s")." GMT");
+		$hdr("X-Powered-By: Zap!", true);
 
 		if (!$headers)
 			return;
 		foreach ($headers as $header)
-			static::header($header);
+			$hdr($header);
 	}
 
 	/**
@@ -215,10 +218,8 @@ class Header {
 
 		static::start_header($code, $cache, $headers);
 
-		static::header('Content-Length: ' .
-			filesize($fpath));
-		static::header("Content-Type: " .
-			Common::get_mimetype($fpath));
+		static::header('Content-Length: ' . filesize($fpath));
+		static::header("Content-Type: " . Common::get_mimetype($fpath));
 
 		if ($disposition) {
 			if ($disposition === true)

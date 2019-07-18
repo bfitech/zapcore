@@ -42,7 +42,7 @@ class Router extends Header {
 	 *     class. Can also be set via Router->config().
 	 */
 	public function __construct(Logger $logger=null) {
-		self::$logger = $logger ? $logger : new Logger();
+		self::$logger = $logger ?? new Logger();
 		self::$logger->debug('Router: started.');
 	}
 
@@ -228,8 +228,7 @@ class Router extends Header {
 		$this->autodetect_host();
 
 		# initialize from request uri
-		$url = isset($_SERVER['REQUEST_URI'])
-			? $_SERVER['REQUEST_URI'] : '';
+		$url = $_SERVER['REQUEST_URI'] ?? '';
 
 		# remove query string
 		$rpath = parse_url($url)['path'];
@@ -258,10 +257,8 @@ class Router extends Header {
 	 * request method.
 	 */
 	private function verify_route_method($path_method) {
-		$this->request_method = (
-			isset($_SERVER['REQUEST_METHOD']) &&
-			!empty($_SERVER['REQUEST_METHOD'])
-		) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
+		$this->request_method = strtoupper(
+			$_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 		# always allow HEAD
 		$methods = is_array($path_method)
@@ -331,8 +328,7 @@ class Router extends Header {
 		if ($method == 'post') {
 			$args['post'] = $is_raw ?
 				file_get_contents("php://input") : $_POST;
-			if (isset($_FILES) && !empty($_FILES))
-				$args['files'] = $_FILES;
+			$args['files'] = $_FILES ?? [];
 			return $this->finish_callback($callback, $args);
 		}
 
@@ -396,10 +392,9 @@ class Router extends Header {
 	 */
 	final public static function path_parser(string $path) {
 		# path must start with slash
-		if ($path[0] != '/') {
-			self::throw_error(
-				"Router: path invalid in '$path'.");
-		}
+		if ($path[0] != '/')
+			self::throw_error("Router: path invalid in '$path'.");
+
 		# ignore trailing slash
 		if ($path != '/')
 			$path = rtrim($path, '/');
@@ -426,11 +421,10 @@ class Router extends Header {
 		if (
 			preg_match("!${non_delims}[${elf}]!", $path) ||
 			preg_match("![${erg}]${non_delims}!", $path)
-		) {
+		)
 			# invalid dynamic path pattern
 			self::throw_error(
 				"Router: dynamic path not well-formed: '$path'.");
-		}
 
 		preg_match_all("!/([$elf][^$erg]+[$erg])!", $path, $tokens,
 			PREG_OFFSET_CAPTURE);
@@ -453,10 +447,9 @@ class Router extends Header {
 			$symbols[] = [$replacement, $token[1], strlen($token[0])];
 		}
 
-		if (count($keys) > count(array_unique($keys))) {
+		if (count($keys) > count(array_unique($keys)))
 			# never allow key reuse to prevent unexpected overrides
 			self::throw_error("Router: param key reused: '$path'.");
-		}
 
 		# construct regex pattern for all capturing keys
 		$idx = 0;
