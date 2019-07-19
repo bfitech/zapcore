@@ -8,13 +8,12 @@ namespace BFITech\ZapCore;
  * Router class.
  *
  * @cond
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @ SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @endcond
  */
-class Router extends Header {
+class Router extends RouteDefault {
 
 	private $request_path = null;
-	private $request_comp = [];
 
 	private $home = null;
 	private $host = null;
@@ -156,36 +155,12 @@ class Router extends Header {
 	private function autodetect_host() {
 		if ($this->host !== null)
 			return;
-		$proto = isset($_SERVER['HTTPS']) && !empty($_SERVER['HTTPS'])
-			? 'https://' : 'http://';
-		$host = isset($_SERVER['SERVER_NAME'])
-			? $_SERVER['HTTP_HOST'] : 'localhost';
-		$port = isset($_SERVER['SERVER_PORT'])
-			? (int)$_SERVER['SERVER_PORT'] : null;
-		// @codeCoverageIgnoreStart
-		$port = $this->verify_port($port, $proto);
-		if ($port && (strpos($host, ':') === false))
-			$host .= ':' . $port;
-		// @codeCoverageIgnoreEnd
-		$host = str_replace([':80', ':443'], '', $host);
-		$this->host = $proto . $host . $this->home;
-	}
-
-	/**
-	 * Verify if port number is valid and not redundant with protocol.
-	 *
-	 * @codeCoverageIgnore
-	 */
-	private function verify_port(int $port=null, string $proto) {
-		if (!$port)
-			return $port;
-		if ($port < 0 || $port > pow(2, 16))
-			return null;
-		if ($port == 80 && $proto == 'http')
-			return null;
-		if ($port == 443 && $proto == 'https')
-			return null;
-		return $port;
+		$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+		$port = $_SERVER['SERVER_PORT'] ?? '80';
+		$sport = in_array($port, ['80', '443']) ? '' : ":$port";
+		$proto = ($_SERVER['HTTPS'] ?? false) ? 'https': 'http';
+		$this->host = sprintf("%s://%s%s%s",
+			$proto, $host, $sport, $this->home);
 	}
 
 	/**
@@ -215,7 +190,6 @@ class Router extends Header {
 
 		# store in private properties
 		$this->request_path = '/' . $rpath;
-		$this->request_comp = explode('/', $rpath);
 		self::$logger->debug(sprintf(
 			"Router: request path: '%s'.",
 			$this->request_path));
@@ -375,39 +349,6 @@ class Router extends Header {
 	}
 
 	/**
-	 * Default abort method.
-	 */
-	private function abort_default($code) {
-		extract(self::get_header_string($code));
-		static::start_header($code);
-		$uri = htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES);
-		echo "<!doctype html>
-<html>
-	<head>
-		<meta charset=utf-8>
-		<meta name=viewport
-			content='width=device-width, initial-scale=1.0,
-				user-scalable=yes'>
-		<title>$code $msg</title>
-		<style>
-			body {background-color: #eee; font-family: sans-serif;}
-			div  {background-color: #fff; border: 1px solid #ddd;
-			      padding: 25px; max-width:800px;
-			      margin:20vh auto 0 auto; text-align:center;}
-		</style>
-	</head>
-	<body>
-		<div>
-			<h1>$code $msg</h1>
-			<p>The URL <tt>&#039;<a href='$uri'>$uri</a>&#039;</tt>
-			   caused an error.</p>
-		</div>
-	</body>
-</html>";
-		static::halt();
-	}
-
-	/**
 	 * Abort.
 	 *
 	 * Create a method called abort_custom() to customize this in a
@@ -429,40 +370,6 @@ class Router extends Header {
 	}
 
 	/**
-	 * Default redirect.
-	 */
-	private function redirect_default(string $destination) {
-		extract(self::get_header_string(301));
-		static::start_header($code, 0, [
-			"Location: $destination",
-		]);
-		$dst = htmlspecialchars($destination, ENT_QUOTES);
-		echo "<!doctype html>
-<html>
-	<head>
-		<meta charset='utf-8'/>
-		<meta name=viewport
-			content='width=device-width, initial-scale=1.0,
-				user-scalable=yes'>
-		<title>$code $msg</title>
-		<style>
-			body {background-color: #eee; font-family: sans-serif;}
-			div  {background-color: #fff; border: 1px solid #ddd;
-			      padding: 25px; max-width:800px;
-			      margin:20vh auto 0 auto; text-align:center;}
-		</style>
-	</head>
-	<body>
-		<div>
-			<h1>$code $msg</h1>
-			<p>See <tt>&#039;<a href='$dst'>$dst</a>&#039;</tt>.</p>
-		</div>
-	</body>
-</html>";
-		static::halt();
-	}
-
-	/**
 	 * Redirect.
 	 *
 	 * Create method called redirect_custom() to customize this in
@@ -479,27 +386,6 @@ class Router extends Header {
 			$this->redirect_default($destination);
 		else
 			$this->redirect_custom($destination);
-		static::halt();
-	}
-
-	/**
-	 * Default static file.
-	 *
-	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
-	 */
-	private function static_file_default(string $path, array $kwargs) {
-		extract(Common::extract_kwargs($kwargs, [
-			'cache' => 0,
-			'disposition' => null,
-			'headers' => [],
-			'reqheaders' => [],
-			'noread' => false,
-			'callback_notfound' => function() {
-				return $this->abort(404);
-			},
-		]));
-		static::send_file($path, $cache, $disposition, $headers,
-			$reqheaders, $noread, $callback_notfound);
 		static::halt();
 	}
 
@@ -573,24 +459,6 @@ class Router extends Header {
 	 */
 	public function get_request_path() {
 		return $this->request_path;
-	}
-
-	/**
-	 * Get request component.
-	 *
-	 * @param int $index Index of component array. Set to null
-	 *     to return the whole array.
-	 * @return mixed If no index is set, the whole component array is
-	 *     returned. Otherwise, indexed element is returned or null if
-	 *     index falls out of range.
-	 */
-	public function get_request_comp(int $index=null) {
-		$comp = $this->request_comp;
-		if ($index === null)
-			return $comp;
-		if (isset($comp[$index]))
-			return $comp[$index];
-		return null;
 	}
 
 }

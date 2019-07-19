@@ -250,9 +250,6 @@ class RouterTest extends TestCase {
 		$core->route('/test/<v1>', function($args) use($core, $eq) {
 			$eq($args['get'], []);
 			$eq($core->get_request_path(), '/test/z');
-			$eq($core->get_request_comp(), ['test', 'z']);
-			$eq($core->get_request_comp(0), 'test');
-			$eq($core->get_request_comp(2), null);
 			$eq($core->get_request_method(), 'POST');
 			$eq($args['post']['x'], 'y');
 			$eq($args['header']['referer'], 'http://example.tld');
