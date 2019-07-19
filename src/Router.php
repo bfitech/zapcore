@@ -172,7 +172,6 @@ class Router extends RouteDefault {
 	private function init_request() {
 
 		$this->autodetect_home();
-
 		$this->autodetect_host();
 
 		# initialize from request uri
@@ -209,8 +208,8 @@ class Router extends RouteDefault {
 
 		# always allow HEAD
 		$methods = is_array($path_method)
-			? $methods = array_merge($path_method, ['HEAD'])
-			: $methods = [$path_method, 'HEAD'];
+			? array_merge($path_method, ['HEAD'])
+			: [$path_method, 'HEAD'];
 		$methods = array_unique($methods);
 		foreach ($methods as $method) {
 			if (!in_array($method, $this->method_collection))

@@ -150,6 +150,7 @@ class RouterTest extends TestCase {
 
 		# regular
 		$rv = Parser::match_route('/x/y/');
+		### trailing slash is removed on generated regex
 		$eq($rv[0], '/x/y');
 		$eq($rv[1], []);
 
@@ -189,8 +190,7 @@ class RouterTest extends TestCase {
 		$core = (new RouterDev)
 			->config('home', '/demo/')
 			->config('host', 'https://localhost/demo');
-		$eq($core->get_host(),
-			'https://localhost/demo/');
+		$eq($core->get_host(), 'https://localhost/demo/');
 
 		# invalid, home is array
 		$core->config('home', []);
@@ -204,15 +204,13 @@ class RouterTest extends TestCase {
 
 		# invalid, null host
 		$core->config('host', null);
-		$eq($core->get_host(),
-			'https://localhost/demo/');
+		$eq($core->get_host(), 'https://localhost/demo/');
 
 		# invalid, non-trailing host
 		$host = 'http://example.org/y/';
 		$core->config('host', $host);
 		$ne($core->get_host(), $host);
-		$eq($core->get_host(),
-			'https://localhost/demo/');
+		$eq($core->get_host(), 'https://localhost/demo/');
 
 		# valid host
 		$host = 'http://example.org/y/demo';
