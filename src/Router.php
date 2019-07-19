@@ -4,14 +4,10 @@
 namespace BFITech\ZapCore;
 
 
-class RouterError extends \Exception {
-}
-
 /**
  * Router class.
  *
  * @cond
- * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @endcond
  */
@@ -252,41 +248,6 @@ class Router extends Header {
 	}
 
 	/**
-	 * Parse request path.
-	 *
-	 * This generates path parser from route path to use against
-	 * request path.
-	 *
-	 * @param string $path Route path.
-	 * @return array|bool False if current request URI doesn't match,
-	 *     a dict otherwise. The dict will be assigned to
-	 *     $args['params'] of router callback, which is empty in case
-	 *     of non-compound route path.
-	 */
-	private function parse_request_path(string $path) {
-
-		# route path and request path is the same
-		if ($path == $this->request_path)
-			return [];
-
-		# generate parser
-		$parser = $this->path_parser($path);
-		if (!$parser[1])
-			return false;
-
-		# parse request
-		$pattern = '!^' . $parser[0] . '$!';
-		$matched = preg_match_all(
-			$pattern, $this->request_path,
-			$result, PREG_SET_ORDER);
-		if (!$matched)
-			return false;
-
-		unset($result[0][0]);
-		return array_combine($parser[1], $result[0]);
-	}
-
-	/**
 	 * Execute callback of a matched route.
 	 *
 	 * @param callable $callback Route callback.
@@ -337,122 +298,6 @@ class Router extends Header {
 	}
 
 	/**
-	 * Write to log and throw exception on error.
-	 */
-	private static function throw_error(string $msg) {
-		self::$logger->error($msg);
-		throw new RouterError($msg);
-	}
-
-	/**
-	 * Path parser.
-	 *
-	 * This parses route path and returns arrays that will parse
-	 * request path.
-	 *
-	 * @param string $path Route path with special enclosing
-	 *     characters:
-	 *     - `< >` for dynamic URL parameter without `/`
-	 *     - `{ }` for dynamic URL parameter with `/`
-	 * @return array A duple with values:
-	 *     - a regular expression to match against request path
-	 *     - an array containing keys that will be used to create
-	 *       dynamic variables with whatever matches the previous
-	 *       regex
-	 * @see Router::route() for usage.
-	 *
-	 * @if TRUE
-	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
-	 * @SuppressWarnings(PHPMD.CyclomaticComplexity)
-	 * @SuppressWarnings(PHPMD.NPathComplexity)
-	 * @endif
-	 */
-	final public static function path_parser(string $path) {
-		# path must start with slash
-		if ($path[0] != '/')
-			self::throw_error("Router: path invalid in '$path'.");
-
-		# ignore trailing slash
-		if ($path != '/')
-			$path = rtrim($path, '/');
-
-		# allowed characters in path
-		$valid_chars = 'a-zA-Z0-9\_\.\-@%:';
-		# param left delimiter
-		$elf = '<\{';
-		# param right delimiter
-		$erg = '>\}';
-		# param delimiter
-		$delims = "\/${elf}${erg}";
-		# non-delimiter
-		$non_delims = "[^${delims}]";
-		# valid param key
-		$valid_key = "[a-z][a-z0-9\_]*";
-
-		if (!preg_match("!^[${valid_chars}${delims}]+$!", $path)) {
-			# invalid characters
-			self::throw_error(
-				"Router: invalid characters in path: '$path'.");
-		}
-
-		if (
-			preg_match("!${non_delims}[${elf}]!", $path) ||
-			preg_match("![${erg}]${non_delims}!", $path)
-		)
-			# invalid dynamic path pattern
-			self::throw_error(
-				"Router: dynamic path not well-formed: '$path'.");
-
-		preg_match_all("!/([$elf][^$erg]+[$erg])!", $path, $tokens,
-			PREG_OFFSET_CAPTURE);
-
-		$keys = $symbols = [];
-		foreach ($tokens[1] as $token) {
-
-			$key = str_replace(['{','}','<','>'], '', $token[0]);
-			if (!preg_match("!^${valid_key}\$!i", $key)) {
-				# invalid param key
-				self::throw_error(
-					"Router: invalid param key: '$path'.");
-			}
-
-			$keys[] = $key;
-			$replacement = $valid_chars;
-			if (strpos($token[0], '{') !== false)
-				$replacement .= '/';
-			$replacement = '([' . $replacement . ']+)';
-			$symbols[] = [$replacement, $token[1], strlen($token[0])];
-		}
-
-		if (count($keys) > count(array_unique($keys)))
-			# never allow key reuse to prevent unexpected overrides
-			self::throw_error("Router: param key reused: '$path'.");
-
-		# construct regex pattern for all capturing keys
-		$idx = 0;
-		$pattern = '';
-		while ($idx < strlen($path)) {
-			$matched = false;
-			foreach ($symbols as $symbol) {
-				if ($idx < $symbol[1])
-					continue;
-				if ($idx == $symbol[1]) {
-					$matched = true;
-					$pattern .= $symbol[0];
-					$idx++;
-					$idx += $symbol[2] - 1;
-				}
-			}
-			if (!$matched) {
-				$pattern .= $path[$idx];
-				$idx++;
-			}
-		}
-
-		return [$pattern, $keys];
-	}
-
-	/**
 	 * Callback wrapper.
 	 *
 	 * Override this for more decorator-like processing. Make sure
@@ -486,7 +331,6 @@ class Router extends Header {
 		string $path, callable $callback, $method='GET',
 		bool $is_raw=null
 	) {
-
 		# route always initializes
 		$this->init();
 
@@ -498,8 +342,9 @@ class Router extends Header {
 		if (!$this->verify_route_method($method))
 			return $this;
 
-		# match route path with request path
-		if (false === $params = $this->parse_request_path($path))
+		# match route path with request path; load $params while at it
+		$params = Parser::match($path, $this->request_path);
+		if ($params === false)
 			return $this;
 
 		# we have a match at this point; initialize callback args
@@ -515,6 +360,7 @@ class Router extends Header {
 			'cookie' => $_COOKIE,
 			'header' => [],
 		];
+
 		# custom headers
 		foreach ($_SERVER as $key => $val) {
 			if (strpos($key, 'HTTP_') === 0) {

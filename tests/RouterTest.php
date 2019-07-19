@@ -3,7 +3,8 @@
 
 use BFITech\ZapCore\Logger;
 use BFITech\ZapCore\Router;
-use BFITech\ZapCore\RouterError;
+use BFITech\ZapCore\Parser;
+use BFITech\ZapCore\ParserError;
 use BFITech\ZapCoreDev\RouterDev;
 use BFITech\ZapCoreDev\RoutingDev;
 use BFITech\ZapCoreDev\TestCase;
@@ -144,50 +145,41 @@ class RouterTest extends TestCase {
 		$eq(404, $core::$code);
 	}
 
-	private function make_parser() {
-		return (new RouterDev)->config('logger', self::$logger);
-	}
-
-	public function test_path_parser() {
+	public function test_parser() {
 		extract(self::vars());
 
 		# regular
-		$rv = Router::path_parser('/x/y/');
+		$rv = Parser::match_route('/x/y/');
 		$eq($rv[0], '/x/y');
 		$eq($rv[1], []);
 
 		# short var
-		$rv = Router::path_parser('/@x/<v1>/y/<v2>/z');
+		$rv = Parser::match_route('/@x/<v1>/y/<v2>/z');
 		$sm($rv[1], ['v1', 'v2']);
 
 		# long var
-		$rv = Router::path_parser('/x/<v1>/y/{v2}/1:z');
+		$rv = Parser::match_route('/x/<v1>/y/{v2}/1:z');
 		$sm($rv[1], ['v1', 'v2']);
-	}
 
-	public function test_path_parser_invalid_path() {
-		$this->expectException(RouterError::class);
-		$this->make_parser()->path_parser('a');
-	}
+		$ce = function($path) {
+			try {
+				Parser::match_route($path);
+			} catch(ParserError $err) {
+				return $err->getCode();
+			}
+			return 0;
+		};
 
-	public function test_path_parser_invalid_dynamic_path() {
-		$this->expectException(RouterError::class);
-		$this->make_parser()->path_parser('/x/<v1>/y{v2}/z');
-	}
-
-	public function test_path_parser_invalid_key() {
-		$this->expectException(RouterError::class);
-		$this->make_parser()->path_parser('/X/<12>/{w2}/z');
-	}
-
-	public function test_path_parser_illegal_char() {
-		$this->expectException(RouterError::class);
-		$this->make_parser()->path_parser('/x/<v1>/!/{v2}/z');
-	}
-
-	public function test_path_parser_key_reuse() {
-		$this->expectException(RouterError::class);
-		$this->make_parser()->path_parser('/x/<v1>/y/{v1}/z');
+		# no leading slash
+		$eq(ParserError::PATH_INVALID, $ce('a'));
+		# y{v2}
+		$eq(ParserError::DYNAMIC_PATH_INVALID, $ce('/x/<v1>/y{v2}/z'));
+		# <12>
+		$eq(ParserError::PARAM_KEY_INVALID, $ce('/X/<12>/{w2}/z'));
+		# !
+		$eq(ParserError::CHAR_INVALID, $ce('/x/<v1>/!/{v2}/z'));
+		# <v1> {v1}
+		$eq(ParserError::PARAM_KEY_REUSED, $ce('/x/<v1>/y/{v1}/z'));
 	}
 
 	public function test_config() {
