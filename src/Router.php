@@ -8,7 +8,7 @@ namespace BFITech\ZapCore;
  * Router class.
  *
  * @cond
- * @ SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @endcond
  */
 class Router extends RouteDefault {

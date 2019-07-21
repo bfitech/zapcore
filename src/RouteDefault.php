@@ -30,7 +30,7 @@ abstract class RouteDefault extends Header {
 			'reqheaders' => [],
 			'noread' => false,
 			'callback_notfound' => function() {
-				return $this->abort(404);
+				return $this->abort_default(404);
 			},
 		]));
 		static::send_file($path, $cache, $disposition, $headers,
