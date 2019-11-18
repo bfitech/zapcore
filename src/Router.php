@@ -225,8 +225,7 @@ class Router extends RouteDefault {
 	 *
 	 * @param callable $callback Route callback.
 	 * @param array $args Route callback parameter.
-	 * @param bool $is_raw If true, request body is not treated as
-	 *     HTTP query. Applicable for POST only.
+	 * @param bool $is_raw If true, expect raw request body.
 	 */
 	private function execute_callback(
 		callable $callback, array $args, bool $is_raw=null
@@ -257,6 +256,49 @@ class Router extends RouteDefault {
 
 		# always return self for chaining even if aborted
 		return $this;
+	}
+
+	/**
+	 * Obtain request content type from headers.
+	 *
+	 * Request header keys must be in lower case.
+	 *
+	 * @param array $headers List of request headers.
+	 * @return string MIME type if header is found, null otherwise.
+	 */
+	public static function get_request_mime(array $headers) {
+		foreach ($headers as $key => $val) {
+			if ($key !== 'content_type')
+				continue;
+			return strtolower($val);
+		}
+		return null;
+	}
+
+	/**
+	 * Obtain array from JSON-encoded request body.
+	 *
+	 * To be used from within router callback method. In case of POST
+	 * method, $is_raw parameter of Router::route must be set to true.
+	 * Appropriate request content type must be set by client.
+	 *
+	 * @param array $args Callback parameters.
+	 * @return array Decoded JSON body or empty array on failure.
+	 */
+	public static function get_json(array $args) {
+		if (!isset($args['header']))
+			return [];
+		$mime = static::get_request_mime($args['header']);
+		if (strpos((string)$mime, 'application/json') !== 0)
+			return [];
+		if (!isset($args['method']))
+			return [];
+		$method = strtolower($args['method']);
+		$body = $args[$method] ?? null;
+		if (!$body || !is_string($body))
+			return [];
+		$json = Config::djson($body);
+		return $json ?? [];
 	}
 
 	/**
@@ -293,11 +335,27 @@ class Router extends RouteDefault {
 	 *     path provided by e.g. script name.
 	 * @param callable $callback Callback function for the path.
 	 *     Callback takes one argument containing HTTP variables
-	 *     collected by route processor.
-	 * @param string $method HTTP request method.
-	 * @param bool $is_raw If true, accept raw data instead of parsed
-	 *     HTTP query. Only applicable for POST method. Useful in,
-	 *     e.g. JSON request body.
+	 *     collected by route processor with keys:
+	 *     - `string` **method**: request method
+	 *     - `array` **params**: route parameters
+	 *     - `array` **get**: query, not necesssarily empty even though
+	 *       request method is not GET
+	 *     - `array|string` **post**: post request body, see $is_raw
+	 *       below
+	 *     - `array` **files**: files coming from an upload
+	 *     - `string` **put**: put request body
+	 *     - `string` **patch**: patch request body
+	 *     - `string` **delete**: delete request body, should not be
+	 *       used as client is expected to never send this
+	 *     - `array` **cookie**: cookie
+	 *     - `array` **header**: request headers, with keys always in
+	 *       lower case separated by underscore, e.g. 'content_type'
+	 *       instead of 'content-type' or 'Content-Type'.
+	 * @param string|array $method One or more HTTP request methods.
+	 * @param bool $is_raw If true, request body is expected to have
+	 *     content type other than `multipart/form-data` or
+	 *     `application/x-www-form-urlencoded` which are
+	 *     internally pre-processed by PHP. For POST only.
 	 * @return object|mixed Router instance for easier chaining.
 	 */
 	final public function route(
@@ -395,19 +453,22 @@ class Router extends RouteDefault {
 	 * Static file.
 	 *
 	 * Create method called static_file_custom() to customize this in
-	 * a subclass.
+	 * a subclass. Otherwise, RouteDefault::static_file_default is used.
 	 *
 	 * @param string $path Absolute path to file.
 	 * @param array $kwargs Additional arguments, a dict with keys:
-	 *     - cache: int Cache age, in seconds. Default: 0.
-	 *     - disposition: string|true|null Content disposition. If true,
-	 *         disposition is inferred from filename. Default: null.
-	 *     - headers: array Additional response headers, e.g. X-Sendfile
-	 *         header, default: [].
-	 *     - reqheaders: array Request headers passed from router.
-	 *     - noread: bool Don't read the file. Send headers only.
-	 *     - callback_notfound: callable Callback when the file is
-	 *         missing, defaults to Router::abort(404).
+	 *     - `int` **cache**: Cache age, in seconds. Default: `0`.
+	 *     - `string|true|null` **disposition**: Content disposition. If
+	 *       true, disposition is inferred from filename. Default:
+	 *       `null`.
+	 *     - `array` **headers**: Additional response headers, e.g.
+	 *       `X-Sendfile`. Default: `[]`.
+	 *     - `array` **reqheaders**: Request headers passed from router.
+	 *       Default: `[]`.
+	 *     - `bool` **noread**: Don't read the file, send headers only
+	 *       if true. Default: `false`.
+	 *     - `callable` **callback_notfound**: Callback when the file is
+	 *       missing, defaults to `Router::abort(404)`.
 	 */
 	final public function static_file(string $path, array $kwargs=[]) {
 		self::$logger->info("Router: static: '$path'.");

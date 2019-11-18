@@ -307,6 +307,77 @@ class RouterTest extends TestCase {
 		}, 'POST');
 	}
 
+	public function test_route_post_json() {
+		$eq = self::eq();
+		$sm = self::sm();
+		list($_, $core) = $this->make_routing();
+
+		/* test static method */
+
+		$args = [];
+		$eq($core::get_json($args), []);
+
+		$args['header'] = [];
+		$eq($core::get_json($args), []);
+
+		$args['header'] = [
+			'content_type' => 'application/json',
+		];
+		$args['method'] = null;
+		$eq($core::get_json($args), []);
+
+		$args['method'] = 'post';
+		$eq($core::get_json($args), []);
+
+		$args['post'] = '';
+		$eq($core::get_json($args), []);
+
+		$args['post'] = '{"errno":0,"data":null}';
+		$sm($core::get_json($args), [
+			'errno' => 0,
+			'data' => null,
+		]);
+
+		/* test in router */
+
+		$post_json = function($header, $post, $callback) {
+			list($rdev, $core) = $this->make_routing();
+			$rdev
+				->request('/test', 'POST', [
+					'header' => $header,
+					'post' => $post,
+				])
+				->route('/test', function($args) use($callback, $core) {
+					$callback($core, $args);
+					return $core::pj([0, $args]);
+				}, 'POST', true);
+			return $core;
+		};
+
+		# mime doesn't match
+		$post_json([], '', function($core, $args) use($eq) {
+			$eq($core::get_json($args), []);
+		});
+
+		# mime matches with broken body
+		$hdr = ['content_type' => 'application/json'];
+		# header can also be set with:
+		#   $_SERVER['HTTP_CONTENT_TYPE'] = 'application/json';
+		# but it will pollute global $_SERVER.
+		$post_json($hdr, '', function($core, $args) use($eq) {
+			$eq($core::get_json($args), []);
+		});
+
+		# ok
+		$post = '{"hey":0,"there":null}';
+		$c = $post_json($hdr, $post, function($core, $args) use($sm) {
+			$sm($core::get_json($args), [
+				'hey' => 0,
+				'there' => null,
+			]);
+		});
+	}
+
 	public function test_route_get() {
 		$eq = self::eq();
 
