@@ -50,6 +50,8 @@ class RouterTest extends TestCase {
 	}
 
 	public function test_default() {
+		extract(self::vars());
+
 		$_SERVER['REQUEST_URI'] = '/';
 
 		# abort 404
@@ -59,7 +61,7 @@ class RouterTest extends TestCase {
 			->route('/s', function(){})
 			->shutdown();
 		$rv = ob_get_clean();
-		$this->ne()(strpos($rv, '404'), false);
+		$ne(strpos($rv, '404'), false);
 
 		# redirect
 		ob_start();
@@ -70,16 +72,23 @@ class RouterTest extends TestCase {
 			})
 			->shutdown();
 		$rv = ob_get_clean();
-		$this->ne()(strpos($rv, '301 Moved'), false);
+		$ne(strpos($rv, '301 Moved Permanently'), false);
 
-		# send file
+		# send file ok
 		ob_start();
 		$core = new RouterDefault;
 		$core->route('/', function($args) use($core){
 			$core->static_file(__FILE__);
 		});
-		$rv = ob_get_clean();
-		self::eq()(strpos($rv, file_get_contents(__FILE__)), false);
+		$eq(ob_get_clean(), file_get_contents(__FILE__));
+
+		# send file not found
+		ob_start();
+		$core = new RouterDefault;
+		$core->route('/', function($args) use($core){
+			$core->static_file(__FILE__ . '/notfound');
+		});
+		$tr(strpos(ob_get_clean(), '404 Not Found') !== false);
 	}
 
 	public function test_route_dev() {
@@ -94,6 +103,16 @@ class RouterTest extends TestCase {
 		$core::send_cookie('foo', 'bar', -30, '/');
 		$fl(isset($_COOKIE['foo']));
 		$tr(is_array($_COOKIE));
+
+		# send file with custom not-found callback
+		$core->route('/', function($args) use($core){
+			$core->static_file(__FILE__ . '/notfound', [
+				'callback_notfound' => function() {
+					echo "wow much not found";
+				},
+			]);
+		});
+		$eq($core::$body_raw, "wow much not found");
 	}
 
 	public function test_route() {

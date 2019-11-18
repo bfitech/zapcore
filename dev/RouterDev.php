@@ -205,7 +205,7 @@ class RouterDev extends Router {
 			self::$errno = 0;
 			self::$data = [$path];
 		} else {
-			self::$code = 404;
+			$callback_notfound();
 		}
 	}
 
