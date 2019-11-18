@@ -18,11 +18,15 @@ abstract class RouteDefault extends Header {
 	/**
 	 * Default static file.
 	 *
-	 * @SuppressWarnings(PHPMD.UnusedLocalVariable)
+	 * @param string $path File location.
+	 * @param array $kwargs Optional parameters consumed by
+	 *     Router::static_file.
 	 */
 	final protected function static_file_default(
-		string $path, array $kwargs
+		string $path, array $kwargs=[]
 	) {
+		$cache = $disposition = $noread = $callback_notfound = null;
+		$headers = $reqheaders = [];
 		extract(Common::extract_kwargs($kwargs, [
 			'cache' => 0,
 			'disposition' => null,
@@ -40,6 +44,8 @@ abstract class RouteDefault extends Header {
 
 	/**
 	 * Default abort method.
+	 *
+	 * @param int $code Valid HTTP status code.
 	 */
 	final protected function abort_default($code) {
 		extract(self::get_header_string($code));
@@ -73,9 +79,15 @@ abstract class RouteDefault extends Header {
 
 	/**
 	 * Default redirect.
+	 *
+	 * @param string $destination Destination URL.
+	 * @param int $code Redirect status code.
+	 * @see Router::redirect.
 	 */
-	final protected function redirect_default(string $destination) {
-		extract(self::get_header_string(301));
+	final protected function redirect_default(
+		string $destination, $code=301
+	) {
+		extract(self::get_header_string($code));
 		static::start_header($code, 0, [
 			"Location: $destination",
 		]);

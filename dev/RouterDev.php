@@ -163,9 +163,10 @@ class RouterDev extends Router {
 	 * Custom redirect for testing.
 	 *
 	 * @param string $url Destination URL.
+	 * @param int $code Redirect status code.
 	 */
-	public function redirect_custom(string $url) {
-		self::$code = 301;
+	public function redirect_custom(string $url, int $code=301) {
+		self::$code = $code;
 		self::$head = ["Location: $url"];
 		self::$body_raw = self::$body = "Location: $url";
 		self::$errno = 0;
@@ -176,16 +177,14 @@ class RouterDev extends Router {
 	 * Custom static file serving for testing.
 	 *
 	 * @param string $path Absolute path to file.
-	 * @param array $kwargs Additional arguments. See
-	 *     BFITech\\ZapCore\\Router::static_file.
-	 *
-	 * @cond
-	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-	 * @endcond
+	 * @param array $kwargs Additional parameters. See
+	 *     Router::static_file.
 	 */
 	public function static_file_custom(
 		string $path, array $kwargs=[]
 	) {
+		$callback_notfound = null;
+		$headers = [];
 		extract(Common::extract_kwargs($kwargs, [
 			'cache' => 0,
 			'disposition' => null,

@@ -371,20 +371,23 @@ class Router extends RouteDefault {
 	/**
 	 * Redirect.
 	 *
-	 * Create method called redirect_custom() to customize this in
-	 * a subclass.
+	 * All redirects are never cached. Create a method called
+	 * redirect_custom() to customize this in a subclass.
 	 *
 	 * @param string $destination Destination URL.
+	 * @param int $code Status code. Use this to change status code
+	 *     to, e.g. 307 for temporary redirect. Do not change to other
+	 *     range of status codes or the redirection will break.
 	 */
-	final public function redirect(string $destination) {
+	final public function redirect(string $destination, int $code=301) {
 		$this->request_handled = true;
 		self::$logger->info(sprintf(
 			"Router: redirect: '%s' -> '%s'.",
 			$this->request_path, $destination));
 		if (!method_exists($this, 'redirect_custom'))
-			$this->redirect_default($destination);
+			$this->redirect_default($destination, $code);
 		else
-			$this->redirect_custom($destination);
+			$this->redirect_custom($destination, $code);
 		static::halt();
 	}
 
