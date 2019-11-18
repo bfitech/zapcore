@@ -82,8 +82,7 @@ class RouterDev extends Router {
 		string $path='', string $domain='',
 		bool $secure=false, bool $httponly=false
 	) {
-		if (!isset($_COOKIE))
-			$_COOKIE = [];
+		$COOKIE = $COOKIE ?? [];
 		if ($expire > 0) {
 			$_COOKIE[$name] = $value;
 			return;

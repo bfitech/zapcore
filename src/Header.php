@@ -204,7 +204,7 @@ class Header {
 	/**
 	 * Send file.
 	 *
-	 * Use the higher-level Route::static_file for integration with
+	 * Use higher-level Router::static_file for integration with
 	 * a router.
 	 *
 	 * @param string $path Path to file.
@@ -285,9 +285,9 @@ class Header {
 	 *
 	 * @param array $retval Return value of typical Zap HTTP response.
 	 *     Invalid format will send 500 HTTP error.
-	 * @param int $forbidden_code If `$retval[0] == 0`, HTTP code is
-	 *     200. Otherwise it defaults to 401 which we can override with
-	 *     this parameter, e.g. 403.
+	 * @param int $forbidden_code If `$retval[0] == 0`, HTTP code
+	 *     is 200. Otherwise it defaults to 401 which we can override
+	 *     with this parameter, e.g. 403.
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 * @see Header::print_json.
 	 *
@@ -308,9 +308,8 @@ class Header {
 			if ($forbidden_code)
 				$http_code = $forbidden_code;
 		}
-		if (!isset($retval[1]))
-			$retval[1] = null;
-		static::print_json($retval[0], $retval[1], $http_code, $cache);
+		$data = $retval[1] ?? null;
+		static::print_json($retval[0], $data, $http_code, $cache);
 	}
 
 }

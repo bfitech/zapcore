@@ -10,8 +10,8 @@ namespace BFITech\ZapCore;
  *
  * This contains essential methods for Router to properly work out of
  * the box. Each methods can be indirectly patched by declaring their
- * custom counterparts from within Route class, e.g. Route::abort_custom
- * to override RouteDefault::abort_default.
+ * custom counterparts from within Router subclass, e.g.
+ * Router::abort_custom to override RouteDefault::abort_default.
  */
 abstract class RouteDefault extends Header {
 

@@ -141,7 +141,7 @@ class Config {
 	public static function djson(string $json_str, bool $throw=false) {
 		$data = json_decode($json_str, true);
 		if ($data === null && $throw)
-			throw new \Exception("Invalid JSON file.");
+			throw new \Exception("Invalid JSON string.");
 		return $data;
 	}
 

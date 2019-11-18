@@ -48,7 +48,7 @@ class CommonTest extends TestCase {
 			if (!is_dir('/tmp'))
 				continue;
 			$fname = "/tmp/zapcore-test-$fbase";
-			$content = isset($fmime[1]) ? $fmime[1] : " ";
+			$content = $fmime[1] ?? " ";
 			file_put_contents($fname, $content);
 
 			# auto
