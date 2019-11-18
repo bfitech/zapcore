@@ -65,7 +65,7 @@ class RoutingDev {
 	 * @param string $request_uri Simulated request URI.
 	 * @param string $request_method Simulated request method.
 	 * @param array $args Simulated callback args, dict with keys:
-	 *     'get', 'post', 'files', 'put', 'patch', 'delete'.
+	 *     'get', 'post', 'files', 'put', 'patch', 'delete'. 'header'.
 	 * @param array $cookie Simulated cookies.
 	 * @return Modified RouterDev instance, useful for chaining from
 	 *     this method to $core->route().
@@ -82,15 +82,15 @@ class RoutingDev {
 
 		# will set matching route and populate callback args from
 		# globals
-		$_SERVER['REQUEST_URI'] = $request_uri
-			? $request_uri : '/';
+		$_SERVER['REQUEST_URI'] = $request_uri ?? '/';
 		$_SERVER['REQUEST_METHOD'] = $request_method;
 
 		# will override collected callback args and reset the rest to
 		# empty array
 		if ($args !== null) {
 			foreach ([
-				'get', 'post', 'files', 'put', 'patch', 'delete'
+				'get', 'post', 'files', 'put', 'patch', 'delete',
+				'header',
 			] as $key) {
 				$args[$key] = array_key_exists($key, $args)
 					? $args[$key] : [];

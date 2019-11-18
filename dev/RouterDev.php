@@ -106,14 +106,23 @@ class RouterDev extends Router {
 	 * Patched Router::wrap_callback().
 	 *
 	 * @param callable $callback Callback method.
-	 * @param array $args HTTP variables collected by router.
+	 * @param array $args Artificial HTTP variables. All values
+	 *     collected from environment are ignored except request headers
+	 *     which are merged with $args['header'].
 	 */
 	public function wrap_callback(callable $callback, array $args=[]) {
-		ob_start();
-		foreach (self::$override_args as $key => $val)
+		foreach (self::$override_args as $key => $val) {
+			if ($key == 'header') {
+				$args['header'] = array_merge($args['header'], $val);
+				continue;
+			}
 			$args[$key] = $val;
+		}
+
+		ob_start();
 		$callback($args);
 		self::$body_raw = ob_get_clean();
+
 		self::$body = @json_decode(self::$body_raw, true);
 		if (self::$body) {
 			self::$errno = self::$body['errno'];
@@ -138,7 +147,8 @@ class RouterDev extends Router {
 	public function override_callback_args(array $args=[]) {
 		foreach ($args as $key => $val) {
 			if (!in_array($key, [
-				'get', 'post', 'files', 'put', 'patch', 'delete'
+				'get', 'post', 'files', 'put', 'patch', 'delete',
+				'header',
 			]))
 				continue;
 			self::$override_args[$key] = $val;
