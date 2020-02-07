@@ -18,20 +18,23 @@ class CommonError extends \Exception {
 class Common {
 
 	/**
-	 * Execute arbitrary shell commands. Use with care.
+	 * Execute arbitrary shell commands. *nix only. Use with care.
 	 *
-	 * @param string $cmd Command with '%s' as parameter placeholders.
+	 * @param string $cmd Command with '%%s' as parameter placeholders.
 	 * @param array $args List of parameters to replace the
 	 *     placeholders in command.
-	 * @return bool|array False on failure, stdout lines otherwise.
+	 * @param int &$retcode Reference to return code, typically >0 on
+	 *     failure.
+	 * @return array Lines from stdout. Redirection works if you want to
+	 *     capture stderr.
 	 */
-	final public static function exec(string $cmd, array $args=[]) {
+	final public static function exec(
+		string $cmd, array $args=[], int &$retcode=null
+	): array {
 		foreach ($args as $key => $val)
 			$args[$key] = escapeshellarg($val);
 		$cmd = vsprintf($cmd, $args);
 		exec($cmd, $output, $retcode);
-		if ($retcode !== 0)
-			return false;
 		return $output;
 	}
 

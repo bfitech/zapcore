@@ -12,25 +12,48 @@ use BFITech\ZapCoreDev\TestCase;
  */
 class CommonTest extends TestCase {
 
-	public function test_mime() {
+	public function test_exec() {
 		extract(self::vars());
-
 		$cmn = new Common;
 
 		if (!function_exists('exec'))
 			$this->markTestSkipped("'exec' is disabled.");
 
-		if (file_exists('/bin/bash')) {
-			$eq($cmn::exec("echo hello")[0], "hello");
-			$eq($cmn::exec("bash -c uwotm8 2>/dev/null")[0], "");
-		} else {
+		if (!file_exists('/bin/bash')) {
 			$this->markTestSkipped("/bin/bash not available.");
 		}
 
+		# escaping works, except for \b in some system
+		$param = ":(\ta'\" k[\xc8\xb8aln \20";
+		$out = $cmn::exec("echo %s", [$param], $retcode)[0];
+		$eq($out, $param);
+		$sm($retcode, 0);
+
+		# invalid bash command
+		$eq($cmn::exec(
+			"bash -c %s 2>/dev/null", ['uwotm8'], $retcode),
+			[]);
+		$ns($retcode, 0);
+
+		# invalid command
+		$eq($cmn::exec(
+			"uwotm8 2>/dev/null", [], $retcode),
+			[]);
+		$ns($retcode, 0);
+	}
+
+	public function test_mime() {
+		extract(self::vars());
+		$cmn = new Common;
+
+		if (!is_dir('/tmp'))
+			$this->markTestSkipped("/tmp directory not available.");
+
 		$filebin = $cmn::exec("bash -c %s 2>/dev/null",
-			["type -p file"])[0];
+			["type -p file"])[0] ?? false;
 
 		foreach ([
+			# sample file names, mime and optional content
 			'xtest.htm'    => ['text/html; charset=utf-8'],
 			'xtest.HTML'   => ['text/html; charset=utf-8'],
 			'xtest.css'    => ['text/css'],
@@ -45,16 +68,16 @@ class CommonTest extends TestCase {
 				pack('H*', "F00F00F00F00F00F00F0")
 			],
 		] as $fbase => $fmime) {
-			if (!is_dir('/tmp'))
-				continue;
-			$fname = "/tmp/zapcore-test-$fbase";
+			# generate
+			$fname = "/tmp/.zapcore-test-$fbase";
 			$content = $fmime[1] ?? " ";
 			file_put_contents($fname, $content);
 
 			# auto
 			$rmime = $cmn::get_mimetype($fname);
 			$sm(strpos($rmime, $fmime[0]), 0);
-			# with `file`
+
+			# with `file`, usually not available on CI
 			if ($filebin) {
 				$rmime = $cmn::get_mimetype($fname, $filebin);
 				$sm(strpos($rmime, $fmime[0]), 0);
@@ -65,17 +88,16 @@ class CommonTest extends TestCase {
 				unlink($fname);
 		}
 
-		if (file_exists($fname)) {
-			# use bogus `file`, in this case, `nologin`
-			$cmn::get_mimetype($fname, 'nologin');
-			$sm(0,
-				strpos(
-					$cmn::get_mimetype($fname),
-					'application/octet-stream')
-				);
-			unlink($fname);
-		}
+		# use bogus `file`, in this case, `nologin`
+		$cmn::get_mimetype($fname, 'nologin');
+		$sm(0,
+			strpos(
+				$cmn::get_mimetype($fname),
+				'application/octet-stream')
+			);
+		unlink($fname);
 
+		# check this file
 		$eq(strpos($cmn::get_mimetype(__FILE__), 'text/x-php'), 0);
 	}
 
