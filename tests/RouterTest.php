@@ -411,7 +411,7 @@ class RouterTest extends TestCase {
 				['patch' => 'hello'])
 			->route('/patchme', function($args) use($core){
 				$core::halt($args['patch']);
-			}, ['PATCH'], false);
+			}, 'PATCH', false);
 		$eq($core->get_request_path(), '/patchme');
 		$eq($core::$body_raw, "hello");
 	}
@@ -468,7 +468,7 @@ class RouterTest extends TestCase {
 			->request('/notfound')
 			->route('/', function($args) use($core) {
 				echo "This will never be reached.";
-			}, 'GET')
+			})
 			# invoke shutdown manually
 			->shutdown();
 		$eq($core::$code, 404);
@@ -489,7 +489,7 @@ class RouterTest extends TestCase {
 			->request('/redirect')
 			->route('/redirect', function($args) use($core) {
 				$core->redirect('/destination');
-			}, 'GET');
+			});
 		$eq($core::$code, 301);
 	}
 

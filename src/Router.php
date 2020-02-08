@@ -71,13 +71,17 @@ class Router extends RouteDefault {
 	}
 
 	/**
-	 * Configure.
+	 * Finetune the router.
 	 *
-	 * If using constructor is too verbose or cumbersome, use this to
-	 * finetune properties.
-	 *
-	 * @param string $key Configuration key.
-	 * @param mixed $val Configuration value.
+	 * @param string $key Configuration key. Available keys and their
+	 * respective value types:
+	 *     - `string` **home**: Override autodetected Router::home.
+	 *     - `string` **host**: Override autodetected Router::host.
+	 *     - `bool` **shutdown**: Tell router to invoke registered
+	 *       shutdown functions if true. Default: true.
+	 *     - `Logger` **logger**: Override logger instance.
+	 * @param mixed $val Configuration value. See $key.
+	 * @see Router::get_home, Router::get_host.
 	 */
 	final public function config(string $key, $val) {
 		if ($this->request_initted)
@@ -278,9 +282,10 @@ class Router extends RouteDefault {
 	/**
 	 * Obtain array from JSON-encoded request body.
 	 *
-	 * To be used from within router callback method. In case of POST
+	 * To be used from within router callback method. In case of `POST`
 	 * method, $is_raw parameter of Router::route must be set to true.
-	 * Appropriate request content type must be set by client.
+	 * Appropriate request content type `application/json` must be set
+	 * by client.
 	 *
 	 * @param array $args Callback parameters.
 	 * @return array Decoded JSON body or empty array on failure.
@@ -354,8 +359,9 @@ class Router extends RouteDefault {
 	 * @param string|array $method One or more HTTP request methods.
 	 * @param bool $is_raw If true, request body is expected to have
 	 *     content type other than `multipart/form-data` or
-	 *     `application/x-www-form-urlencoded` which are
-	 *     internally pre-processed by PHP. For POST only.
+	 *     `application/x-www-form-urlencoded` which is internally
+	 *     pre-processed by PHP. For `POST` only. Set this to false
+	 *     e.g. when expecting JSON payload from client.
 	 * @return object|mixed Router instance for easier chaining.
 	 */
 	final public function route(
@@ -480,7 +486,8 @@ class Router extends RouteDefault {
 	/**
 	 * Shutdown function.
 	 *
-	 * If no request is handled at this point, show a 501 or 404.
+	 * If no request is handled at this point, show a 501 or 404 abort
+	 * page.
 	 */
 	final public function shutdown() {
 		if ($this->request_handled)
@@ -497,14 +504,14 @@ class Router extends RouteDefault {
 	/* getters */
 
 	/**
-	 * Show home.
+	 * Show home, i.e. root path of the web application.
 	 */
 	public function get_home() {
 		return $this->home;
 	}
 
 	/**
-	 * Show host.
+	 * Show host, i.e. the top-level URI of the web application.
 	 */
 	public function get_host() {
 		return $this->host;
