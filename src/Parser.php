@@ -18,7 +18,7 @@ class ParserError extends \Exception {
 	/** Dynamic key invalid. */
 	const PARAM_KEY_INVALID = 0x0104;
 	/** Dynamic key reused. */
-	const PARAM_KEY_REUSED = 0105;
+	const PARAM_KEY_REUSED = 0x0105;
 
 	/**
 	 * Constructor.
