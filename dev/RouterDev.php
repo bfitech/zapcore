@@ -53,9 +53,7 @@ class RouterDev extends Router {
 	 * @param bool $replace The 'replace' option for standard
 	 *     header() function.
 	 *
-	 * @cond
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-	 * @endcond
 	 */
 	public static function header(
 		string $header_string, bool $replace=false
@@ -70,25 +68,42 @@ class RouterDev extends Router {
 	/**
 	 * Patched Header::send_cookie().
 	 *
-	 * Expiration is just 0 or 1. If 1, cookie is set, otherwise, cookie
-	 * is considered stale and unset if exists.
+	 * Expiration is just >0 or not. If >0, cookie is set. Otherwise,
+	 * cookie is considered stale and unset if exists. Expiration
+	 * still means Un\*x epoch, not the Max-Age. You still need to use
+	 * `time() + ...` or the like on your tested code.
 	 *
-	 * @cond
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
-	 * @endcond
 	 */
 	public static function send_cookie(
-		string $name, string $value='', int $expire=1,
+		string $name, string $value='', int $expires=0,
 		string $path='', string $domain='',
 		bool $secure=false, bool $httponly=false
 	) {
 		$COOKIE = $COOKIE ?? [];
-		if ($expire > 0) {
+		if ($expires > 0) {
 			$_COOKIE[$name] = $value;
 			return;
 		}
 		if (isset($_COOKIE[$name]))
 			unset($_COOKIE[$name]);
+	}
+
+	/**
+	 * Patched Header::send_cookie_with_opts().
+	 *
+	 * Only 'expire' key on the third paramater is processed. Unlike
+	 * the real static method, this doesn't care if we run on
+	 * PHP<7.3 or not.
+	 */
+	public static function send_cookie_with_opts(
+		string $name, string $value='', array $opts=[]
+	) {
+		$expires = 1;
+		extract(Common::extract_kwargs($opts, [
+			'expires' => 1,
+		]));
+		static::send_cookie($name, $value, $expires);
 	}
 
 	/**

@@ -277,6 +277,7 @@ class Config {
 		try {
 			$sdata = $this->get($key);
 		} catch (ConfigError $err) {
+			// no-op
 		}
 		if ($sdata)
 			$this->throw(

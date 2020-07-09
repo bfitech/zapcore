@@ -99,6 +99,7 @@ class Logger {
 			fwrite($this->handle, $line);
 			// @codeCoverageIgnoreStart
 		} catch(\Exception $e) {
+			// no-op
 		}
 			// @codeCoverageIgnoreEnd
 	}

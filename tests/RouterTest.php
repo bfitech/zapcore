@@ -104,6 +104,14 @@ class RouterTest extends TestCase {
 		$fl(isset($_COOKIE['foo']));
 		$tr(is_array($_COOKIE));
 
+		# test fake cookie with opts
+		unset($_COOKIE);
+		$core::send_cookie_with_opts('quux', 'baz');
+		$sm($_COOKIE['quux'], 'baz');
+		$core::send_cookie_with_opts('quux', 'baz', ['expires' => 0]);
+		$fl(isset($_COOKIE['quux']));
+		$tr(is_array($_COOKIE));
+
 		# send file with custom not-found callback
 		$core->route('/', function($args) use($core){
 			$core->static_file(__FILE__ . '/notfound', [

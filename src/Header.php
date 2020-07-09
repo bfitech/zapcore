@@ -110,9 +110,7 @@ class Header {
 	 *     is printed. If it's a string, it will be immediately printed.
 	 * @codeCoverageIgnore
 	 *
-	 * @cond
 	 * @SuppressWarnings(PHPMD.ExitExpression)
-	 * @endcond
 	 */
 	public static function halt(string $arg=null) {
 		if ($arg === null)
@@ -127,14 +125,44 @@ class Header {
 	 * Parameters are exactly the same with the wrapped
 	 * function.
 	 *
+	 * This doesn't support samesite attribute.
+	 *
 	 * @codeCoverageIgnore
 	 */
 	public static function send_cookie(
-		string $name, string $value='', int $expire=0,
+		string $name, string $value='', int $expires=0,
 		string $path='', string $domain='',
 		bool $secure=false, bool $httponly=false
 	) {
-		@setcookie($name, $value, $expire, $path, $domain,
+		@setcookie($name, $value, $expires, $path, $domain,
+			$secure, $httponly);
+	}
+
+	/**
+	 * Wrapper for setcookie on PHP>=7.3 with a dict as the third
+	 * parameter.
+	 *
+	 * This falls back to old behavior of sendcookie on older PHP
+	 * version.
+	 *
+	 * @codeCoverageIgnore
+	 * @SuppressWarnings(PHPMD.UnusedLocalVariables)
+	 */
+	public static function send_cookie_with_opts(
+		string $name, string $value='', array $opts=[]
+	) {
+		if (version_compare(PHP_VERSION, '7.3.0', '>=')) {
+			@setcookie($name, $value, $opts);
+			return;
+		}
+		extract(Common::extract_kwargs($opts, [
+			'expires' => 0,
+			'path' => '',
+			'domain' => '',
+			'secure' => false,
+			'httponly' => false,
+		]));
+		@static::send_cookie($name, $value, $expires, $path, $domain,
 			$secure, $httponly);
 	}
 
@@ -291,9 +319,7 @@ class Header {
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 * @see Header::print_json.
 	 *
-	 * @cond
 	 * @SuppressWarnings(PHPMD.ShortMethodName)
-	 * @endcond
 	 */
 	final public static function pj(
 		$retval, int $forbidden_code=null, int $cache=0
