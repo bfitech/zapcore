@@ -110,7 +110,9 @@ class Header {
 	 *     is printed. If it's a string, it will be immediately printed.
 	 * @codeCoverageIgnore
 	 *
+	 * @if TRUE
 	 * @SuppressWarnings(PHPMD.ExitExpression)
+	 * @endif
 	 */
 	public static function halt(string $arg=null) {
 		if ($arg === null)
@@ -146,7 +148,9 @@ class Header {
 	 * version.
 	 *
 	 * @codeCoverageIgnore
+	 * @if TRUE
 	 * @SuppressWarnings(PHPMD.UnusedLocalVariables)
+	 * @endif
 	 */
 	public static function send_cookie_with_opts(
 		string $name, string $value='', array $opts=[]
@@ -319,7 +323,9 @@ class Header {
 	 * @param int $cache Cache duration in seconds. 0 for no cache.
 	 * @see Header::print_json.
 	 *
+	 * @if TRUE
 	 * @SuppressWarnings(PHPMD.ShortMethodName)
+	 * @endif
 	 */
 	final public static function pj(
 		$retval, int $forbidden_code=null, int $cache=0

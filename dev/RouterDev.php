@@ -53,7 +53,9 @@ class RouterDev extends Router {
 	 * @param bool $replace The 'replace' option for standard
 	 *     header() function.
 	 *
+	 * @if TRUE
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+	 * @endif
 	 */
 	public static function header(
 		string $header_string, bool $replace=false
@@ -73,7 +75,9 @@ class RouterDev extends Router {
 	 * still means Un\*x epoch, not the Max-Age. You still need to use
 	 * `time() + ...` or the like on your tested code.
 	 *
+	 * @if TRUE
 	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+	 * @endif
 	 */
 	public static function send_cookie(
 		string $name, string $value='', int $expires=0,

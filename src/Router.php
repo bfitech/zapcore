@@ -7,7 +7,9 @@ namespace BFITech\ZapCore;
 /**
  * Router class.
  *
+ * @if TRUE
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @endif
  */
 class Router extends RouteDefault {
 
@@ -26,13 +28,15 @@ class Router extends RouteDefault {
 	/** Logging service. */
 	public static $logger = null;
 
+	private $middlewares = [];
+
 	/**
 	 * Constructor.
 	 *
-	 * To finetune properties, use Router->config().
+	 * To finetune properties, use Router::config.
 	 *
 	 * @param Logger $logger Logging service, an instance of Logger
-	 *     class. Can also be set via Router->config().
+	 *     class. Can also be set via config().
 	 */
 	public function __construct(Logger $logger=null) {
 		self::$logger = $logger ?? new Logger();
@@ -110,8 +114,7 @@ class Router extends RouteDefault {
 	 * Initialize parser and shutdown handler.
 	 *
 	 * Only manually call this in case you need to do something prior
-	 * to calling $this->route() as that method will internally call
-	 * this.
+	 * to calling route() as that method will internally call this.
 	 */
 	final public function init() {
 		if ($this->request_initted)
@@ -311,6 +314,8 @@ class Router extends RouteDefault {
 		callable $callback, array $args
 	) {
 		$this->request_handled = true;
+		foreach ($this->middlewares as $middleware)
+			$middleware[1]($args, $this);
 		$this->wrap_callback($callback, $args);
 		return $this;
 	}
@@ -329,6 +334,45 @@ class Router extends RouteDefault {
 			$this->request_method, $this->request_path));
 		$callback($args);
 		static::halt();
+	}
+
+	/**
+	 * Add a middleware.
+	 *
+	 * Middleware herein is defined as whatever reads and/or modifies
+	 * collected HTTP variables `$args`. The variables are then
+	 * consumed by wrap_callback() which is internally called by
+	 * route(). In short, middleware modifies request, while callback
+	 * wrapper modifies response.
+	 *
+	 * Middlewares are stored in a list and executed in the order of
+	 * priority (see param). This method adds one middleware at a time.
+	 * Once added, a middleware cannot be removed.
+	 *
+	 * By convention, non-anonymous middleware callable is prefixed
+	 * `mdw_*`.
+	 *
+	 * @param callable $middleware Middleware callable with two args:
+	 *     - `&$args`: reference to initial HTTP variable collection;
+	 *       middlewares mutate the variables
+	 *     - `$core`: the Router instance, optional; required to know
+	 *       the routing context: path, request method, logging
+	 *       instance, etc.
+	 * @param int $priority Order of execution. The higher, the later
+	 *     it will execute.
+	 * @note Middleware modifies request. Multiple middlewares slows
+	 *     down the routing. Bad middlewares break router callback. Use
+	 *     with care.
+	 */
+	final public function add_middleware(
+		callable $middleware, int $priority=0
+	) {
+		$this->middlewares[] = [$priority, $middleware];
+		usort($this->middlewares, function($old, $new) {
+			if ($old[0] == $new[0])
+				return 0;
+			return $old[0] < $new[0] ? -1 : 1;
+		});
 	}
 
 	/**

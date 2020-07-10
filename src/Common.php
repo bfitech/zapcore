@@ -11,7 +11,9 @@ class CommonError extends \Exception {
 /**
  * Utility class.
  *
+ * @if TRUE
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @endif
  */
 class Common {
 

@@ -501,4 +501,68 @@ class RouterTest extends TestCase {
 		$eq($core::$code, 301);
 	}
 
+	public function test_middleware() {
+		$eq = self::eq();
+
+		### original callback
+		list($_, $core) = $this->make_routing();
+		$callback = function($args) use($core) {
+			if (!$args['params'])
+				return $core::pj([0, 'original']);
+			return $core::pj([0, $args['params']['q']]);
+		};
+
+		### middlewares
+		$mdw1 = function(&$args) {
+			$args['params']['q'] = 1;
+		};
+		$mdw2 = function(&$args, $_core) {
+			if ($_core->get_request_method() == 'POST')
+				$args['params']['q'] = 2;
+		};
+
+		# no middleware
+		list($rdev, $core) = $this->make_routing();
+		$rdev
+			->request('/')
+			->route('/', $callback);
+		$eq($core::$data, 'original');
+
+		# with one middleware, default priority
+		list($rdev, $core) = $this->make_routing();
+		$core->add_middleware($mdw1);
+		$rdev
+			->request('/')
+			->route('/', $callback);
+		$eq($core::$data, '1');
+
+		# with another middleware, sensitive to request method
+		list($rdev, $core) = $this->make_routing();
+		$core->add_middleware($mdw1);
+		$core->add_middleware($mdw2, 100);
+		$rdev
+			->request('/')
+			->route('/', $callback);
+		$eq($core::$data, '1');
+
+		# same middleware, added multiple times
+		list($rdev, $core) = $this->make_routing();
+		$core->add_middleware($mdw2, 100);
+		$core->add_middleware($mdw1);
+		$core->add_middleware($mdw2, 100);
+		$rdev
+			->request('/')
+			->route('/', $callback);
+		$eq($core::$data, '1');
+
+		# same middleware, different request method
+		list($rdev, $core) = $this->make_routing();
+		$core->add_middleware($mdw1);
+		$core->add_middleware($mdw2, 100);
+		$rdev
+			->request('/', 'POST')
+			->route('/', $callback, 'POST');
+		$eq($core::$data, '2');
+	}
+
 }
