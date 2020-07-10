@@ -80,34 +80,34 @@ class RouterDev extends Router {
 	 * @endif
 	 */
 	public static function send_cookie(
-		string $name, string $value='', int $expires=0,
+		string $name, string $value=null, int $expires=0,
 		string $path='', string $domain='',
 		bool $secure=false, bool $httponly=false
-	) {
+	): bool {
 		$COOKIE = $COOKIE ?? [];
 		if ($expires > 0) {
 			$_COOKIE[$name] = $value;
-			return;
+			return true;
 		}
 		if (isset($_COOKIE[$name]))
 			unset($_COOKIE[$name]);
+		return true;
 	}
 
 	/**
 	 * Patched Header::send_cookie_with_opts().
 	 *
-	 * Only 'expire' key on the third paramater is processed. Unlike
-	 * the real static method, this doesn't care if we run on
-	 * PHP<7.3 or not.
+	 * Only 'expires' key on the third paramater is considered. The rest
+	 * are ignored.
 	 */
 	public static function send_cookie_with_opts(
-		string $name, string $value='', array $opts=[]
-	) {
+		string $name, string $value=null, array $opts=[]
+	): bool {
 		$expires = 1;
 		extract(Common::extract_kwargs($opts, [
 			'expires' => 1,
 		]));
-		static::send_cookie($name, $value, $expires);
+		return static::send_cookie($name, $value, $expires);
 	}
 
 	/**

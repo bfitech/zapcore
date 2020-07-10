@@ -72,8 +72,8 @@ class Header {
 	 * Get HTTP code.
 	 *
 	 * @param int $code HTTP code.
-	 * @return array A dict containing code and message if
-	 *     `$code` is valid, 404 dict otherwise.
+	 * @return array A dict containing code and message if `$code` is
+	 *     valid, 404 dict otherwise.
 	 */
 	final public static function get_header_string(int $code) {
 		$lookup = self::header_strings();
@@ -86,13 +86,13 @@ class Header {
 	}
 
 	/**
-	 * Wrapper for header().
-	 *
-	 * Override this for non-web context, e.g. for testing.
+	 * Wrapper for builtin header().
 	 *
 	 * @param string $header_string Header string.
 	 * @param bool $replace The 'replace' option for standard
 	 *     header() function.
+	 * @see BFITech.ZapCoreDev.RouterDev.header for testing
+	 *
 	 * @codeCoverageIgnore
 	 */
 	public static function header(
@@ -102,12 +102,12 @@ class Header {
 	}
 
 	/**
-	 * Wrapper for die().
-	 *
-	 * Override this for non-web context, e.g. for testing.
+	 * Wrapper for builtin die().
 	 *
 	 * @param string $arg What to print on halt. If null, nothing
 	 *     is printed. If it's a string, it will be immediately printed.
+	 * @see BFITech.ZapCoreDev.RouterDev.halt for testing
+	 *
 	 * @codeCoverageIgnore
 	 *
 	 * @if TRUE
@@ -121,53 +121,60 @@ class Header {
 	}
 
 	/**
-	 * Wrapper for setcookie().
+	 * Wrapper of PHP<7.3 setcookie.
 	 *
-	 * Override this for non-web context, e.g. for testing.
-	 * Parameters are exactly the same with the wrapped
-	 * function.
+	 * Parameters are exactly the same with setcookie. This doesn't
+	 * support samesite attribute.
 	 *
-	 * This doesn't support samesite attribute.
+	 * @return bool True on success.
+	 * @deprecated Use Header::send_cookie_with_opts for support of
+	 *     newer cookie attributes and more specs-compliance.
+	 * @see BFITech.ZapCoreDev.RouterDev.send_cookie for testing
 	 *
 	 * @codeCoverageIgnore
 	 */
 	public static function send_cookie(
-		string $name, string $value='', int $expires=0,
+		string $name, string $value=null, int $expires=0,
 		string $path='', string $domain='',
 		bool $secure=false, bool $httponly=false
-	) {
-		@setcookie($name, $value, $expires, $path, $domain,
+	): bool {
+		return setcookie($name, $value, $expires, $path, $domain,
 			$secure, $httponly);
 	}
 
 	/**
-	 * Wrapper for setcookie on PHP>=7.3 with a dict as the third
-	 * parameter.
+	 * Send cookie similar to PHP>=7.3 setcookie.
 	 *
-	 * This falls back to old behavior of sendcookie on older PHP
-	 * version.
+	 * For older PHP version, a polyfill is used.
+	 *
+	 * @param string $name Cookie name.
+	 * @param string $value Cookie value. Null or empty to unset.
+	 * @param array $opts Cookie options exactly the same with PHP>=7.3
+	 *     setcookie. `samesite` default value is `Lax`.
+	 * @return bool True on success.
+	 * @see Cookie::build
+	 * @see BFITech.ZapCoreDev.RouterDev.send_cookie_with_opts for
+	 *     testing
 	 *
 	 * @codeCoverageIgnore
-	 * @if TRUE
-	 * @SuppressWarnings(PHPMD.UnusedLocalVariables)
-	 * @endif
 	 */
 	public static function send_cookie_with_opts(
-		string $name, string $value='', array $opts=[]
-	) {
-		if (version_compare(PHP_VERSION, '7.3.0', '>=')) {
-			@setcookie($name, $value, $opts);
-			return;
+		string $name, string $value=null, array $opts=[]
+	): bool {
+		if (version_compare(PHP_VERSION, '7.3.0', '<')) {
+			require_once __DIR__ . '/../poly/Cookie.php';
+			$hdr = Cookie::build($name, $value, $opts);
+			if (!$hdr)
+				return false;
+			static::header($hdr);
+			return true;
 		}
-		extract(Common::extract_kwargs($opts, [
-			'expires' => 0,
-			'path' => '',
-			'domain' => '',
-			'secure' => false,
-			'httponly' => false,
-		]));
-		@static::send_cookie($name, $value, $expires, $path, $domain,
-			$secure, $httponly);
+
+		$samesite = $opts['samesite'] ?? 'Lax';
+		if (!in_array($samesite, ['None', 'Lax', 'Strict']))
+			$samesite = 'Lax';
+		$opts['samesite'] = $samesite;
+		return setcookie($name, $value, $opts);
 	}
 
 	/**

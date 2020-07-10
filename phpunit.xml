@@ -35,6 +35,7 @@
 		<whitelist processUncoveredFilesFromWhitelist="true">
 			<directory suffix=".php">./src</directory>
 			<directory suffix=".php">./dev</directory>
+			<directory suffix=".php">./poly</directory>
 		</whitelist>
 	</filter>
 	<logging>
