@@ -218,17 +218,14 @@ class Header {
 	/**
 	 * Generate ETag.
 	 *
-	 * This is a very basic ETag generation. Patch this with your more
-	 * collision-resistant implementation.
+	 * Implementation mimics Nginx, with weak validator 'W/' always on.
 	 *
 	 * @param string $path File path.
 	 * @return string ETag.
+	 * @see https://archive.fo/znx1D#l1681
 	 */
 	public static function gen_etag(string $path): string {
-		$fph = fopen($path, 'r');
-		$cnt = fread($fph, 1024 ** 2);
-		fclose($fph);
-		return sprintf('W/"%s"', crc32($cnt));
+		return sprintf('W/"%x-%x"', filemtime($path), filesize($path));
 	}
 
 	private static function check_etag(
@@ -246,13 +243,17 @@ class Header {
 	 * Use higher-level Router::static_file for integration with
 	 * a router.
 	 *
+	 * This doesn't support `Content-Range` by default. If you want to
+	 * serve big files, set $noread to true and let the web server do
+	 * the heavy lifting.
+	 *
 	 * @param string $path Path to file.
 	 * @param mixed $disposition If set as string, this will be used
 	 *     as filename on content disposition. If true, content
 	 *     disposition is inferred from basename. Otherwise, no
 	 *     content disposition header is sent.
 	 * @param int $cache Cache age, 0 for no cache.
-	 * @param array $headers Additional headers.
+	 * @param array $headers Additional response headers.
 	 * @param array $reqheaders Request headers passed from router.
 	 *     Useful to process ETag and other things.
 	 * @param bool $noread If true, file is not read. Useful when file
@@ -287,7 +288,6 @@ class Header {
 		static::start_header(200, $cache, $headers);
 		$hdr('Content-Length: ' . filesize($path));
 		$hdr('Content-Type: ' . Common::get_mimetype($path));
-		$hdr('ETag: ' . static::gen_etag($path));
 		if ($disposition) {
 			if ($disposition === true)
 				$disposition = basename($path);
@@ -296,8 +296,11 @@ class Header {
 				rawurlencode($disposition))
 			);
 		}
-		if (!$noread)
+		if (!$noread) {
+			$hdr('ETag: ' . static::gen_etag($path));
+			$hdr('Accept-Ranges: none');
 			readfile($path);
+		}
 		static::halt();
 	}
 
