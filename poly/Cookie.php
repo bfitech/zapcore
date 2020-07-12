@@ -35,7 +35,8 @@ class Cookie {
 	 * other attributes.
 	 *
 	 * @param string $name Cookie name.
-	 * @param string $value Cookie value.
+	 * @param string $value Cookie value. Empty value always means
+	 *     deletion and disregards 'expires' key on options.
 	 * @param array $opts Cookie options.
 	 * @return string Cookie response header on success, null otherwise.
 	 * @see https://git.io/JJmDi
