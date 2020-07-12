@@ -93,10 +93,10 @@ class HeaderTest extends TestCase {
 		# disposition string
 		$hdr = new HeaderPatched;
 		ob_start();
-		$hdr::send_file(__FILE__, 0, 'my-file.log');
+		$hdr::send_file(__FILE__, 0, 'my file.log');
 		$eq($hdr::$code, 200);
 		$disp = self::get_header($hdr, 'Content-Disposition')[0];
-		$tr(strpos($disp, 'my-file.log') !== false);
+		$tr(strpos($disp, 'my%20file.log') !== false);
 		$eq(ob_get_clean(), file_get_contents(__FILE__));
 
 		# disposition true

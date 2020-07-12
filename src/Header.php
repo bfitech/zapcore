@@ -216,19 +216,19 @@ class Header {
 	}
 
 	/**
-	 * Generate Etag.
+	 * Generate ETag.
 	 *
-	 * This is a very basic Etag generation. Patch this with your more
+	 * This is a very basic ETag generation. Patch this with your more
 	 * collision-resistant implementation.
 	 *
 	 * @param string $path File path.
-	 * @return string Etag.
+	 * @return string ETag.
 	 */
-	public static function gen_etag(string $path) {
+	public static function gen_etag(string $path): string {
 		$fph = fopen($path, 'r');
 		$cnt = fread($fph, 1024 ** 2);
 		fclose($fph);
-		return crc32($cnt);
+		return sprintf('W/"%s"', crc32($cnt));
 	}
 
 	private static function check_etag(
@@ -254,7 +254,7 @@ class Header {
 	 * @param int $cache Cache age, 0 for no cache.
 	 * @param array $headers Additional headers.
 	 * @param array $reqheaders Request headers passed from router.
-	 *     Useful to process Etag and other things.
+	 *     Useful to process ETag and other things.
 	 * @param bool $noread If true, file is not read. Useful when file
 	 *     is served by other means such as sending $header
 	 *     `X-Accel-Redirect` on Nginx or `X-Sendfile` on Apache.
@@ -286,14 +286,15 @@ class Header {
 
 		static::start_header(200, $cache, $headers);
 		$hdr('Content-Length: ' . filesize($path));
-		$hdr("Content-Type: " . Common::get_mimetype($path));
-		$hdr('Etag: ' . static::gen_etag($path));
+		$hdr('Content-Type: ' . Common::get_mimetype($path));
+		$hdr('ETag: ' . static::gen_etag($path));
 		if ($disposition) {
 			if ($disposition === true)
 				$disposition = basename($path);
-			$disposition = htmlspecialchars($disposition, ENT_QUOTES);
-			$hdr("Content-Disposition: attachment; " .
-				"filename=\"$disposition\"");
+			$hdr(sprintf(
+				'Content-Disposition: attachment; filename="%s"',
+				rawurlencode($disposition))
+			);
 		}
 		if (!$noread)
 			readfile($path);
