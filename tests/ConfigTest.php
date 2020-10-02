@@ -24,9 +24,13 @@ class ConfigTest extends TestCase {
 			's1' => [
 				'k0' => ['a', 'b', 1e3],
 			],
+			# ambiguous keys; don't use this format; use Config::add to
+			# guarantee well-formedness
 			's2' => [
 				'0' => ['a'],
-				'1' => ['b'],
+				'1' => [
+					'v' => 'w',
+				],
 			],
 		];
 		self::$cfile = self::tdir(__FILE__) . '/zapconfig.json';
@@ -202,6 +206,23 @@ class ConfigTest extends TestCase {
 		// into a hashmap as shown below; DON'T DO IT
 		$ncnf->add('s0.k5.w', 'x');
 		$sm($ncnf->get('s0.k5.w'), 'x');
+
+		// NOTE: broken config due to keys being all numeric and
+		// ordered, causing ambiguity
+		$cnf->set('s2.0', ['x']);
+		$sm($cnf->get('s2.0'), ['x']);
+		$cnf->set('s2.1.v', 'z');
+		$sm($cnf->get('s2.1.v'), 'z');
+		// value can be treated as array and it won't trigger error
+		$cnf->set('s2', ['w']);
+		// '1' numeric index is gone, which might be unintended
+		$code = 0;
+		try {
+			$cnf->get('s2.1');
+		} catch (ConfigError $err) {
+			$code = $err->getCode();
+		}
+		$eq(ConfigError::GET_KEY_NOT_FOUND, $code);
 	}
 
 	public function test_add() {
@@ -217,6 +238,15 @@ class ConfigTest extends TestCase {
 			$code = $err->getCode();
 		}
 		$eq(ConfigError::ADD_KEY_TOO_SHORT, $code);
+
+		# key is numeric
+		$code = 0;
+		try {
+			$cnf->add(M_PI, 2);
+		} catch (ConfigError $err) {
+			$code = $err->getCode();
+		}
+		$eq(ConfigError::ADD_KEY_IS_NUMERIC, $code);
 
 		# value is assoc
 		$code = 0;

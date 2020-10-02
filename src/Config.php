@@ -30,8 +30,10 @@ class ConfigError extends \Exception {
 	const ADD_KEY_TOO_SHORT = 0x0301;
 	/** New key for addition already exists. */
 	const ADD_KEY_FOUND = 0x0302;
+	/** Key cannot be numeric. */
+	const ADD_KEY_IS_NUMERIC = 0x0303;
 	/** New value for addition is an associative array */
-	const ADD_VALUE_IS_DICT = 0x0303;
+	const ADD_VALUE_IS_DICT = 0x0304;
 
 	/** Key for deletion doesn't exist. */
 	const DEL_KEY_NOT_FOUND = 0x0401;
@@ -60,6 +62,9 @@ class ConfigError extends \Exception {
  * or any other format as long as it supports JSON-like arbitrary data
  * structure. You only need to patch Config::read() and Config::write()
  * to do this.
+ *
+ * This is meant for simple configuration manager. Do not use for
+ * generic data storage.
  *
  * ### example
  * @code
@@ -265,7 +270,9 @@ class Config {
 	/**
 	 * Add a key.
 	 *
-	 * @param string $key Keys joined by separator.
+	 * @param string $key Keys joined by separator. It cannot be
+	 *     numeric, whether written as number or as any represetntation
+	 *     that translates to number  such as '1e8' or M_PI;
 	 * @param mixed $value Configuration value. Only scalar and
 	 *     non-associative array are accepted.
 	 * @return void
@@ -277,6 +284,10 @@ class Config {
 			$this->throw(
 				ConfigError::ADD_KEY_TOO_SHORT,
 				"Key name is too short.");
+		if (is_numeric($key))
+			$this->throw(
+				ConfigError::ADD_KEY_IS_NUMERIC,
+				"Key name cannot be numeric.");
 
 		if (is_array($value) && $this->is_dict($value))
 			$this->throw(
