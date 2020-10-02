@@ -174,7 +174,17 @@ class Config {
 				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 	}
 
+	/**
+	 * Naive way to determinie whether an array is numeric or
+	 * associative.
+	 *
+	 * This works by comparing keys against a list of possible indices.
+	 * In case of empty array, there's no way to tell the difference,
+	 * in which case, let's just assume the array is numeric.
+	 */
 	private function is_dict(array $arr) {
+		if (!$arr)
+			return false;
 		return array_keys($arr) !== range(0, count($arr) - 1);
 	}
 

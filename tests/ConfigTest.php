@@ -19,9 +19,14 @@ class ConfigTest extends TestCase {
 				'k2' => 65535,
 				'k3' => [1e2, 1e2 + 1],
 				'k4' => M_PI,
+				'k5' => [],
 			],
 			's1' => [
 				'k0' => ['a', 'b', 1e3],
+			],
+			's2' => [
+				'0' => ['a'],
+				'1' => ['b'],
 			],
 		];
 		self::$cfile = self::tdir(__FILE__) . '/zapconfig.json';
@@ -184,6 +189,19 @@ class ConfigTest extends TestCase {
 		# valid, by re-reading from config file
 		$ncnf = new Config(self::$cfile);
 		$sm($ncnf->get('s0.k3'), ['x', 'y']);
+
+		# valid array value to an empty one
+		$ncnf->set('s0.k5', [1]);
+		$sm($ncnf->get('s0.k5'), [1]);
+
+		# valid array value to an empty one
+		$ncnf->set('s0.k5', []);
+		$sm($ncnf->get('s0.k5'), []);
+
+		// NOTE: empty array can be overridden with add() and changed
+		// into a hashmap as shown below; DON'T DO IT
+		$ncnf->add('s0.k5.w', 'x');
+		$sm($ncnf->get('s0.k5.w'), 'x');
 	}
 
 	public function test_add() {
