@@ -30,7 +30,6 @@ TAB_SIZE               = 4
 ALIASES                = fixme="@todo" \
                          codeCoverageIgnore="" \
                          SuppressWarnings=""
-TCL_SUBST              =
 OPTIMIZE_OUTPUT_FOR_C  = NO
 OPTIMIZE_OUTPUT_JAVA   = NO
 OPTIMIZE_FOR_FORTRAN   = NO
